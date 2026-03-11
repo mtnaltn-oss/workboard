@@ -1,0 +1,2777 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>İş Takip — WorkBoard</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<!-- EmailJS SDK -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f0f2f7;--surface:#ffffff;--surface2:#f5f6fa;--border:#e2e5ee;--border2:#d0d4e3;
+    --text:#1a1d2e;--text-muted:#6b7280;--text-dim:#a0a8bb;
+    --accent:#6c63ff;--accent2:#8b5cf6;--green:#10b981;--yellow:#f59e0b;
+    --red:#ef4444;--orange:#f97316;--blue:#3b82f6;--pink:#ec4899;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;overflow:hidden;}
+
+  /* SIDEBAR */
+  .sidebar{width:230px;min-width:230px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;}
+  .logo{padding:20px 20px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:16px;color:var(--text);letter-spacing:-.3px;}
+  .logo-text span{color:var(--accent);}
+  .sidebar-section{padding:12px 12px 4px;}
+  .sidebar-label{font-size:10px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text-dim);padding:0 8px 8px;display:flex;align-items:center;justify-content:space-between;}
+  .sidebar-label-add{cursor:pointer;color:var(--text-dim);font-size:16px;line-height:1;transition:color .15s;padding:0 2px;}
+  .sidebar-label-add:hover{color:var(--accent);}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;cursor:pointer;transition:all .15s;font-size:13.5px;color:var(--text-muted);font-weight:500;position:relative;}
+  .nav-item:hover{background:var(--surface2);color:var(--text);}
+  .nav-item.active{background:rgba(108,99,255,.15);color:var(--accent);}
+  .nav-item.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:60%;background:var(--accent);border-radius:0 2px 2px 0;}
+  .nav-icon{width:18px;text-align:center;font-size:15px;}
+  .nav-badge{margin-left:auto;background:var(--accent);color:white;font-size:10px;font-weight:700;padding:1px 6px;border-radius:10px;min-width:18px;text-align:center;}
+  .board-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .nav-team-actions{display:none;align-items:center;gap:2px;flex-shrink:0;}
+  .nav-team-item:hover .nav-team-actions{display:flex;}
+  .nav-team-item:hover .nav-team-actions + *{display:none;}
+  .nav-team-btn{width:20px;height:20px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;transition:all .15s;color:var(--text-dim);}
+  .nav-team-btn:hover{background:var(--border2);color:var(--text);}
+  .nav-team-del:hover{background:rgba(239,68,68,.12)!important;color:var(--red)!important;}
+
+  /* MAIN */
+  .main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0;}
+  .page-title{font-family:'Syne',sans-serif;font-weight:700;font-size:17px;color:var(--text);flex:1;}
+  .topbar-actions{display:flex;align-items:center;gap:10px;}
+  .btn{display:flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-family:'DM Sans',sans-serif;font-weight:600;transition:all .15s;}
+  .btn-primary{background:var(--accent);color:white;}
+  .btn-primary:hover{background:var(--accent2);transform:translateY(-1px);}
+  .btn-ghost{background:transparent;color:var(--text-muted);border:1px solid var(--border2);}
+  .btn-ghost:hover{background:var(--surface2);color:var(--text);}
+  .search-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 12px;width:200px;}
+  .search-box input{background:none;border:none;outline:none;color:var(--text);font-size:13px;font-family:'DM Sans',sans-serif;width:100%;}
+  .search-box input::placeholder{color:var(--text-dim);}
+  .content{flex:1;overflow:auto;padding:24px;}
+
+  /* STATS */
+  .stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;overflow:hidden;animation:fadeIn .4s ease both;}
+  .stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+  .stat-card:nth-child(1)::before{background:var(--accent);}
+  .stat-card:nth-child(2)::before{background:var(--green);}
+  .stat-card:nth-child(3)::before{background:var(--yellow);}
+  .stat-card:nth-child(4)::before{background:var(--red);}
+  .stat-label{font-size:11.5px;color:var(--text-muted);font-weight:500;margin-bottom:6px;}
+  .stat-value{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--text);line-height:1;}
+  .stat-sub{font-size:11.5px;color:var(--text-dim);margin-top:4px;}
+
+  /* TABS */
+  .view-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--surface2);border-radius:10px;padding:4px;width:fit-content;}
+  .view-tab{padding:6px 16px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500;color:var(--text-muted);transition:all .15s;display:flex;align-items:center;gap:6px;}
+  .view-tab.active{background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .view-tab:hover:not(.active){color:var(--text);}
+
+  /* TABLE */
+  .board-table{width:100%;border-collapse:collapse;}
+  .board-table th{text-align:left;font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);padding:0 12px 10px;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .board-table th:first-child{padding-left:0;}
+  .group-header{display:flex;align-items:center;gap:10px;padding:16px 0 8px;}
+  .group-color{width:4px;height:20px;border-radius:2px;flex-shrink:0;}
+  .group-name{font-family:'Syne',sans-serif;font-weight:700;font-size:14px;color:var(--text);}
+  .group-count{font-size:12px;color:var(--text-dim);background:var(--surface2);padding:1px 7px;border-radius:10px;font-weight:500;}
+  .task-row{cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border);}
+  .task-row:hover{background:rgba(0,0,0,.02);}
+  .task-row:hover .row-actions{opacity:1;}
+  .task-row td{padding:10px 12px;font-size:13.5px;vertical-align:middle;}
+  .task-row td:first-child{padding-left:0;}
+  .task-check{width:16px;height:16px;border:2px solid var(--border2);border-radius:4px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;flex-shrink:0;}
+  .task-check:hover{border-color:var(--accent);}
+  .task-check.done{background:var(--green);border-color:var(--green);color:#fff;font-size:10px;}
+  .task-name-cell{display:flex;align-items:center;gap:10px;}
+  .task-name{font-weight:500;color:var(--text);font-size:13.5px;}
+  .task-name.done-text{text-decoration:line-through;color:var(--text-dim);}
+  .status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;white-space:nowrap;}
+  .status-dot{width:6px;height:6px;border-radius:50%;}
+  .priority-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11.5px;font-weight:600;}
+  .avatar{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;border:2px solid var(--surface);flex-shrink:0;margin-left:-4px;}
+  .avatar:first-child{margin-left:0;}
+  .date-cell{font-size:12.5px;color:var(--text-muted);white-space:nowrap;}
+  .date-overdue{color:var(--red);}
+  .date-soon{color:var(--orange);}
+  .progress-wrap{display:flex;align-items:center;gap:8px;}
+  .progress-bar{flex:1;height:6px;background:var(--border);border-radius:3px;overflow:hidden;min-width:60px;}
+  .progress-fill{height:100%;border-radius:3px;}
+  .progress-pct{font-size:11.5px;color:var(--text-muted);white-space:nowrap;}
+  .add-task-row td{padding:8px 12px;border-bottom:1px solid var(--border);}
+  .add-task-btn{display:flex;align-items:center;gap:6px;color:var(--text-dim);font-size:13px;cursor:pointer;transition:color .15s;padding:4px 0;background:none;border:none;font-family:'DM Sans',sans-serif;}
+  .add-task-btn:hover{color:var(--accent);}
+  .row-actions{opacity:0;transition:opacity .15s;display:flex;align-items:center;gap:4px;}
+  .row-action-btn{width:24px;height:24px;border-radius:5px;display:flex;align-items:center;justify-content:center;background:var(--surface2);border:1px solid var(--border);cursor:pointer;color:var(--text-muted);font-size:11px;transition:all .15s;}
+  .row-action-btn:hover{color:var(--text);background:var(--border2);}
+
+  /* KANBAN */
+  .kanban-board{display:flex;gap:16px;overflow-x:auto;padding-bottom:12px;}
+  .kanban-col{min-width:270px;max-width:270px;background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;max-height:calc(100vh - 200px);}
+  .kanban-col-header{padding:14px 16px;display:flex;align-items:center;gap:8px;border-bottom:1px solid var(--border);flex-shrink:0;}
+  .kanban-col-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);flex:1;}
+  .kanban-col-count{font-size:11px;background:var(--surface2);color:var(--text-dim);padding:2px 7px;border-radius:10px;font-weight:600;}
+  .kanban-cards{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;}
+  .kanban-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;cursor:grab;transition:all .15s;}
+  .kanban-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 16px rgba(108,99,255,.12);}
+  .kanban-card.dragging{opacity:.4;cursor:grabbing;transform:scale(.97);}
+  .kanban-col.drag-over .kanban-cards{background:rgba(108,99,255,.06);border-radius:8px;}
+  .kanban-col.drag-over{border-color:var(--accent);box-shadow:0 0 0 2px rgba(108,99,255,.2);}
+  .kanban-drop-placeholder{height:72px;border:2px dashed rgba(108,99,255,.35);border-radius:10px;background:rgba(108,99,255,.04);}
+  .kanban-card-title{font-size:13.5px;font-weight:500;margin-bottom:10px;line-height:1.4;}
+  .kanban-card-footer{display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;}
+  .kanban-add-btn{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:8px;border:1px dashed var(--border2);color:var(--text-dim);font-size:12.5px;cursor:pointer;transition:all .15s;background:none;font-family:'DM Sans',sans-serif;margin:4px 10px 10px;width:calc(100% - 20px);}
+  .kanban-add-btn:hover{color:var(--accent);border-color:var(--accent);background:rgba(108,99,255,.05);}
+
+  /* ===== TEAMS PAGE ===== */
+  .teams-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;}
+  .teams-title{font-family:'Syne',sans-serif;font-weight:800;font-size:22px;}
+  .teams-subtitle{color:var(--text-muted);font-size:13.5px;margin-top:4px;}
+  .teams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;}
+  .team-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden;transition:all .2s;animation:fadeIn .35s ease both;}
+  .team-card:hover{border-color:var(--border2);box-shadow:0 4px 24px rgba(0,0,0,.3);transform:translateY(-2px);}
+  .team-card-header{padding:20px 20px 16px;display:flex;align-items:flex-start;gap:14px;border-bottom:1px solid var(--border);position:relative;}
+  .team-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+  .team-info{flex:1;min-width:0;}
+  .team-name{font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:var(--text);}
+  .team-desc{font-size:12.5px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .team-actions{display:flex;gap:4px;}
+  .team-action-btn{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:all .15s;}
+  .team-action-btn:hover{color:var(--text);background:var(--border2);}
+  .team-action-btn.danger:hover{color:var(--red);background:rgba(245,101,101,.1);border-color:rgba(245,101,101,.3);}
+  .team-members{padding:14px 20px;}
+  .team-members-title{font-size:11px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;}
+  .members-list{display:flex;flex-direction:column;gap:8px;}
+  .member-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);transition:border-color .15s;}
+  .member-row:hover{border-color:var(--border2);}
+  .member-info{flex:1;min-width:0;}
+  .member-name{font-size:13px;font-weight:600;color:var(--text);}
+  .member-role{font-size:11.5px;color:var(--text-muted);}
+  .member-remove-btn{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);cursor:pointer;transition:all .15s;background:none;border:none;}
+  .member-remove-btn:hover{color:var(--red);background:rgba(245,101,101,.1);}
+  .team-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .team-stat{font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:4px;}
+  .team-stat strong{color:var(--text-muted);}
+  .add-member-btn{margin-left:auto;display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:7px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.3);color:var(--accent);font-size:12.5px;font-weight:600;cursor:pointer;transition:all .15s;font-family:'DM Sans',sans-serif;}
+  .add-member-btn:hover{background:rgba(108,99,255,.22);}
+  .empty-members{text-align:center;padding:16px;color:var(--text-dim);font-size:13px;}
+  .no-teams{grid-column:1/-1;text-align:center;padding:60px 0;color:var(--text-dim);}
+
+  /* MODALS */
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;width:520px;max-height:85vh;overflow-y:auto;box-shadow:0 24px 80px rgba(0,0,0,.6);}
+  .modal-sm{width:420px;}
+  .modal-header{padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .modal-title{font-family:'Syne',sans-serif;font-weight:700;font-size:16px;}
+  .modal-close{width:28px;height:28px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s;}
+  .modal-close:hover{color:var(--text);background:var(--border2);}
+  .modal-body{padding:20px 24px;display:flex;flex-direction:column;gap:16px;}
+  .form-group{display:flex;flex-direction:column;gap:6px;}
+  .form-label{font-size:12px;font-weight:600;color:var(--text-muted);}
+  .form-input{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13.5px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;width:100%;}
+  .form-input:focus{border-color:var(--accent);}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .form-select{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-size:13.5px;font-family:'DM Sans',sans-serif;outline:none;cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237b7ea8' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:30px;width:100%;}
+  .form-select option{background:var(--surface);}
+  .modal-footer{padding:16px 24px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px;}
+  .color-picker{display:flex;gap:8px;flex-wrap:wrap;}
+  .color-swatch{width:28px;height:28px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:all .15s;}
+  .color-swatch.selected{border-color:white;transform:scale(1.15);}
+  .emoji-picker{display:flex;gap:6px;flex-wrap:wrap;}
+  .emoji-option{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;background:var(--surface2);border:2px solid transparent;transition:all .15s;}
+  .emoji-option.selected{border-color:var(--accent);background:rgba(108,99,255,.15);}
+  .emoji-option:hover{background:var(--border2);}
+  .person-list{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto;}
+  .person-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;transition:all .15s;background:var(--surface2);}
+  .person-item:hover{border-color:var(--accent);background:rgba(108,99,255,.08);}
+  .person-item.selected{border-color:var(--accent);background:rgba(108,99,255,.12);}
+  .person-item-check{width:16px;height:16px;border:2px solid var(--border2);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0;margin-left:auto;}
+  .person-item.selected .person-item-check{background:var(--accent);border-color:var(--accent);color:white;}
+  .person-item-name{font-size:13.5px;font-weight:600;color:var(--text);}
+  .person-item-title{font-size:12px;color:var(--text-muted);}
+
+  .hidden{display:none!important;}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+  .toast{position:fixed;bottom:24px;right:24px;background:#1a1d2e;color:#fff;border-radius:10px;padding:12px 18px;font-size:13.5px;box-shadow:0 8px 32px rgba(0,0,0,.18);z-index:200;transform:translateY(80px);opacity:0;transition:all .3s;display:flex;align-items:center;gap:8px;}
+  .toast.show{transform:translateY(0);opacity:1;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  /* ── GİRİŞ EKRANI ── */
+  .auth-screen{
+    position:fixed;inset:0;z-index:300;
+    background:linear-gradient(135deg,#f0f2ff 0%,#faf5ff 50%,#eff6ff 100%);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .auth-screen.hidden{display:none!important;}
+  .auth-card{
+    background:#fff;border:1px solid var(--border);border-radius:24px;
+    padding:40px 44px;width:420px;
+    box-shadow:0 20px 60px rgba(108,99,255,.12),0 4px 16px rgba(0,0,0,.06);
+    animation:slideUp .4s ease both;
+  }
+  .auth-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+  .auth-logo-icon{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+  .auth-logo-text{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;color:var(--text);}
+  .auth-logo-text span{color:var(--accent);}
+  .auth-title{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;color:var(--text);margin-bottom:6px;}
+  .auth-sub{font-size:14px;color:var(--text-muted);margin-bottom:28px;}
+  .auth-tabs{display:flex;gap:0;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:24px;}
+  .auth-tab{flex:1;text-align:center;padding:8px;border-radius:7px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--text-muted);transition:all .15s;}
+  .auth-tab.active{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1);}
+  .auth-form{display:flex;flex-direction:column;gap:14px;}
+  .auth-field{display:flex;flex-direction:column;gap:6px;}
+  .auth-label{font-size:12px;font-weight:600;color:var(--text-muted);letter-spacing:.3px;}
+  .auth-input{
+    background:var(--surface2);border:1.5px solid var(--border);border-radius:10px;
+    padding:11px 14px;color:var(--text);font-size:14px;font-family:'DM Sans',sans-serif;
+    outline:none;transition:all .15s;width:100%;
+  }
+  .auth-input:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px rgba(108,99,255,.1);}
+  .auth-input::placeholder{color:var(--text-dim);}
+  .auth-btn{
+    margin-top:4px;padding:12px;border-radius:10px;border:none;
+    background:linear-gradient(135deg,var(--accent),var(--accent2));
+    color:white;font-size:14px;font-weight:700;font-family:'DM Sans',sans-serif;
+    cursor:pointer;transition:all .15s;letter-spacing:.2px;
+  }
+  .auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(108,99,255,.35);}
+  .auth-btn:active{transform:translateY(0);}
+  .auth-divider{display:flex;align-items:center;gap:12px;margin:4px 0;}
+  .auth-divider-line{flex:1;height:1px;background:var(--border);}
+  .auth-divider-text{font-size:12px;color:var(--text-dim);}
+  .auth-quick{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .auth-quick-btn{
+    padding:9px 10px;border-radius:8px;border:1.5px solid var(--border);
+    background:var(--surface2);cursor:pointer;font-size:12px;font-weight:600;
+    font-family:'DM Sans',sans-serif;color:var(--text-muted);transition:all .15s;
+    display:flex;align-items:center;gap:7px;
+  }
+  .auth-quick-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(108,99,255,.05);}
+  .auth-error{
+    background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);
+    border-radius:8px;padding:10px 12px;font-size:13px;color:var(--red);
+    display:none;
+  }
+  .auth-error.show{display:block;}
+
+  /* ── TOPBAR USER WIDGET ── */
+  .user-widget{display:flex;align-items:center;gap:8px;cursor:pointer;padding:5px 10px;border-radius:10px;transition:background .15s;position:relative;}
+  .user-widget:hover{background:var(--surface2);}
+  .user-widget-name{font-size:13px;font-weight:600;color:var(--text);}
+  .user-widget-role{font-size:11px;color:var(--text-muted);}
+  .user-dropdown{
+    position:absolute;top:calc(100% + 8px);right:0;
+    background:#fff;border:1px solid var(--border);border-radius:12px;
+    box-shadow:0 8px 32px rgba(0,0,0,.12);min-width:200px;z-index:50;
+    overflow:hidden;display:none;
+  }
+  .user-dropdown.open{display:block;animation:fadeIn .15s ease;}
+  .ud-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+  .ud-info .ud-name{font-size:13.5px;font-weight:700;color:var(--text);}
+  .ud-info .ud-email{font-size:11.5px;color:var(--text-muted);margin-top:2px;}
+  .ud-item{display:flex;align-items:center;gap:10px;padding:10px 16px;font-size:13px;color:var(--text-muted);cursor:pointer;transition:background .12s;}
+  .ud-item:hover{background:var(--surface2);color:var(--text);}
+  .ud-item.danger{color:var(--red);}
+  .ud-item.danger:hover{background:rgba(239,68,68,.06);}
+  .ud-sep{height:1px;background:var(--border);margin:4px 0;}
+
+  /* ── KİŞİ PANELİ ── */
+  .people-panel{
+    position:fixed;left:230px;bottom:0;width:300px;
+    background:var(--surface);border:1px solid var(--border2);border-bottom:none;
+    border-radius:14px 14px 0 0;
+    box-shadow:0 -8px 40px rgba(0,0,0,.5);
+    z-index:90;
+    transform:translateY(100%);
+    transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .people-panel.open{transform:translateY(0);}
+  .pp-handle{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;cursor:pointer;user-select:none;
+    border-bottom:1px solid var(--border);
+  }
+  .pp-handle-left{display:flex;align-items:center;gap:8px;}
+  .pp-title{font-family:'Syne',sans-serif;font-weight:700;font-size:13px;color:var(--text);}
+  .pp-count{font-size:11px;background:rgba(108,99,255,.2);color:var(--accent);padding:2px 8px;border-radius:10px;font-weight:700;}
+  .pp-chevron{color:var(--text-dim);font-size:13px;transition:transform .3s;}
+  .people-panel.open .pp-chevron{transform:rotate(180deg);}
+  .pp-body{padding:12px;max-height:340px;overflow-y:auto;}
+  .pp-search{display:flex;align-items:center;gap:7px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 10px;margin-bottom:10px;}
+  .pp-search input{background:none;border:none;outline:none;color:var(--text);font-size:12.5px;font-family:'DM Sans',sans-serif;width:100%;}
+  .pp-search input::placeholder{color:var(--text-dim);}
+  .pp-people{display:flex;flex-direction:column;gap:6px;}
+  .pp-person{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);transition:border-color .15s;position:relative;}
+  .pp-person:hover{border-color:var(--border2);}
+  .pp-person:hover .pp-actions{opacity:1;}
+  .pp-pname{font-size:13px;font-weight:600;color:var(--text);}
+  .pp-ptitle{font-size:11px;color:var(--text-muted);margin-top:1px;}
+  .pp-actions{opacity:0;transition:opacity .15s;display:flex;gap:3px;margin-left:auto;flex-shrink:0;}
+  .pp-btn{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;transition:all .15s;border:none;background:none;color:var(--text-dim);}
+  .pp-btn:hover{background:var(--border2);color:var(--text);}
+  .pp-btn.del:hover{background:rgba(245,101,101,.15);color:var(--red);}
+  .pp-add-form{display:flex;flex-direction:column;gap:8px;padding:10px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;margin-top:10px;}
+  .pp-add-title{font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--text-dim);margin-bottom:2px;}
+  .pp-input{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:7px 10px;color:var(--text);font-size:12.5px;font-family:'DM Sans',sans-serif;outline:none;transition:border-color .15s;width:100%;}
+  .pp-input:focus{border-color:var(--accent);}
+  .pp-color-row{display:flex;gap:6px;flex-wrap:wrap;}
+  .pp-swatch{width:22px;height:22px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:all .15s;flex-shrink:0;}
+  .pp-swatch.sel{border-color:white;transform:scale(1.2);}
+  .pp-add-btn{display:flex;align-items:center;justify-content:center;gap:5px;padding:7px;border-radius:7px;background:var(--accent);border:none;color:white;font-size:12.5px;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;}
+  .pp-add-btn:hover{background:var(--accent2);}
+  .pp-toggle-btn{display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:7px;background:none;border:1px dashed var(--border2);color:var(--text-dim);font-size:12px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;transition:all .15s;width:100%;margin-top:4px;justify-content:center;}
+  .pp-toggle-btn:hover{border-color:var(--accent);color:var(--accent);}
+
+  /* sidebar trigger */
+  .sidebar-people-trigger{
+    display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:8px;
+    cursor:pointer;transition:all .15s;font-size:13.5px;color:var(--text-muted);font-weight:500;
+    border:1px dashed transparent;margin:2px 0;
+  }
+  .sidebar-people-trigger:hover{background:var(--surface2);color:var(--text);}
+  .sidebar-people-trigger.panel-open{background:rgba(108,99,255,.1);color:var(--accent);border-color:rgba(108,99,255,.25);}
+  .pp-edit-row{display:flex;align-items:center;gap:6px;}
+
+  /* ── DAVET SİSTEMİ ── */
+  .invite-btn{
+    display:flex;align-items:center;gap:6px;padding:7px 14px;
+    border-radius:8px;border:1.5px solid var(--accent);
+    background:rgba(108,99,255,.07);color:var(--accent);
+    font-size:13px;font-weight:600;font-family:'DM Sans',sans-serif;
+    cursor:pointer;transition:all .15s;
+  }
+  .invite-btn:hover{background:rgba(108,99,255,.14);transform:translateY(-1px);}
+
+  /* Davet modal özel */
+  .invite-tabs{display:flex;gap:0;background:var(--surface2);border-radius:9px;padding:3px;margin-bottom:18px;}
+  .invite-tab{flex:1;text-align:center;padding:7px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600;color:var(--text-muted);transition:all .15s;}
+  .invite-tab.active{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.08);}
+
+  .link-box{
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface2);border:1.5px solid var(--border);
+    border-radius:10px;padding:10px 14px;
+  }
+  .link-url{flex:1;font-size:12.5px;color:var(--text-muted);font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .copy-btn{
+    padding:5px 12px;border-radius:7px;background:var(--accent);
+    color:#fff;font-size:12px;font-weight:700;border:none;cursor:pointer;
+    font-family:'DM Sans',sans-serif;white-space:nowrap;transition:all .15s;flex-shrink:0;
+  }
+  .copy-btn:hover{background:var(--accent2);}
+  .copy-btn.copied{background:var(--green);}
+
+  .invite-hint{font-size:12px;color:var(--text-dim);margin-top:8px;line-height:1.5;}
+
+  /* Bekleyen davetler listesi */
+  .pending-list{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto;}
+  .pending-row{
+    display:flex;align-items:center;gap:10px;
+    padding:10px 12px;border-radius:10px;
+    background:var(--surface2);border:1px solid var(--border);
+  }
+  .pending-email{flex:1;font-size:13px;color:var(--text);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;}
+  .pending-meta{font-size:11.5px;color:var(--text-dim);white-space:nowrap;}
+  .pending-status{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;white-space:nowrap;
+  }
+  .status-pending{background:rgba(245,158,11,.1);color:#d97706;}
+  .status-accepted{background:rgba(16,185,129,.1);color:#059669;}
+  .revoke-btn{
+    width:22px;height:22px;border-radius:5px;display:flex;align-items:center;
+    justify-content:center;font-size:11px;color:var(--text-dim);cursor:pointer;
+    transition:all .15s;background:none;border:none;flex-shrink:0;
+  }
+  .revoke-btn:hover{background:rgba(239,68,68,.1);color:var(--red);}
+  .empty-invites{text-align:center;padding:24px;color:var(--text-dim);font-size:13px;}
+
+  /* Davet sayacı rozeti topbar'da */
+  .invite-badge{
+    position:absolute;top:-4px;right:-4px;
+    width:16px;height:16px;border-radius:50%;
+    background:var(--red);color:#fff;font-size:9px;font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    border:2px solid var(--surface);
+  }
+  .invite-btn-wrap{position:relative;}
+</style>
+</head>
+<body>
+
+<!-- ── GİRİŞ EKRANI ── -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">⚡</div>
+      <div class="auth-logo-text">Work<span>Board</span></div>
+    </div>
+    <div class="auth-title" id="auth-title">Tekrar hoş geldiniz</div>
+    <div class="auth-sub" id="auth-sub">Hesabınıza giriş yapın</div>
+
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">Giriş Yap</div>
+      <div class="auth-tab" id="tab-register" onclick="switchAuthTab('register')">Kayıt Ol</div>
+    </div>
+
+    <div class="auth-error" id="auth-error"></div>
+
+    <div class="auth-form" id="auth-form-login">
+      <div class="auth-field">
+        <div class="auth-label">E-POSTA</div>
+        <input class="auth-input" id="login-email" type="email" placeholder="ornek@sirket.com" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">ŞİFRE</div>
+        <input class="auth-input" id="login-pass" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="auth-btn" onclick="doLogin()">Giriş Yap →</button>
+    </div>
+
+    <div class="auth-form hidden" id="auth-form-register">
+      <div class="auth-field">
+        <div class="auth-label">AD SOYAD</div>
+        <input class="auth-input" id="reg-name" type="text" placeholder="Adınız Soyadınız" onkeydown="if(event.key==='Enter')doRegister()"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">E-POSTA</div>
+        <input class="auth-input" id="reg-email" type="email" placeholder="ornek@sirket.com" onkeydown="if(event.key==='Enter')doRegister()"/>
+      </div>
+      <div class="auth-field">
+        <div class="auth-label">ŞİFRE</div>
+        <input class="auth-input" id="reg-pass" type="password" placeholder="En az 6 karakter" onkeydown="if(event.key==='Enter')doRegister()"/>
+      </div>
+      <div style="display:flex;align-items:flex-start;gap:8px;background:rgba(108,99,255,.07);border:1px solid rgba(108,99,255,.18);border-radius:9px;padding:10px 13px;font-size:12.5px;color:#4338ca;line-height:1.5">
+        <span style="font-size:15px;flex-shrink:0">ℹ️</span>
+        <span>Hesabınız <strong>Üye</strong> rolüyle oluşturulur. Rol ataması sisteme giriş yapan yönetici tarafından yapılır.</span>
+      </div>
+      <button class="auth-btn" onclick="doRegister()">Hesap Oluştur →</button>
+    </div>
+
+    <div class="auth-divider"><div class="auth-divider-line"></div><div class="auth-divider-text">veya hızlı giriş</div><div class="auth-divider-line"></div></div>
+    <div class="auth-quick" id="quick-logins"></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">⚡</div>
+    <div class="logo-text">Work<span>Board</span></div>
+  </div>
+  <div class="sidebar-section">
+    <div class="nav-item active" id="nav-tasks" onclick="taskFilter='all';showPage('tasks',this)">
+      <span class="nav-icon">📋</span>Tüm Görevler
+      <span class="nav-badge" id="total-badge">0</span>
+    </div>
+    <div class="nav-item" onclick="showFiltered('mine',this)"><span class="nav-icon">👤</span>Bana Atananlar</div>
+    <div class="nav-item" onclick="showFiltered('week',this)"><span class="nav-icon">📅</span>Bu Hafta</div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label">
+      <span>Çalışma Grupları</span>
+      <span class="sidebar-label-add" onclick="openNewTeamModal()" title="Yeni grup">＋</span>
+    </div>
+    <div id="teams-nav"></div>
+    <div class="nav-item" id="nav-teams" onclick="showPage('teams',this)" style="margin-top:4px">
+      <span class="nav-icon">👥</span>Grupları Yönet
+    </div>
+  </div>
+  <div class="sidebar-section">
+    <div class="sidebar-label"><span>Diğer</span></div>
+    <div class="nav-item" onclick="showPage('reports',this)"><span class="nav-icon">📊</span>Raporlar</div>
+    <div class="nav-item" onclick="showPage('settings',this)"><span class="nav-icon">⚙️</span>Ayarlar</div>
+  </div>
+  <div style="padding:8px 12px 16px;margin-top:auto;">
+    <div class="sidebar-people-trigger" id="pp-trigger" onclick="togglePeoplePanel()">
+      <span style="font-size:15px">👤</span>
+      <span>Kişileri Yönet</span>
+      <span class="nav-badge" id="pp-badge" style="background:var(--surface2);color:var(--text-muted);border:1px solid var(--border)">0</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="topbar">
+    <div style="display:flex;flex-direction:column;justify-content:center;flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--text-dim);margin-bottom:1px">
+        <span style="cursor:pointer;transition:color .15s" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--text-dim)'" onclick="taskFilter='all';showPage('tasks',document.getElementById('nav-tasks'))">🏠 Tüm Görevler</span>
+        <span id="breadcrumb-sep" class="hidden" style="opacity:.4">›</span>
+        <span id="breadcrumb-current" class="hidden" style="color:var(--text);font-weight:600"></span>
+      </div>
+      <div class="page-title" id="page-title" style="font-size:15px;line-height:1.2">Tüm Görevler</div>
+    </div>
+    <div class="topbar-actions">
+      <div class="search-box" id="search-wrap">
+        <span style="color:var(--text-dim);font-size:14px">🔍</span>
+        <input type="text" placeholder="Görev ara..." id="search-input" oninput="render()">
+      </div>
+      <div style="position:relative">
+        <button class="btn btn-ghost" id="btn-filter" onclick="toggleFilterPanel()">🔽 Filtre <span id="filter-active-dot" class="hidden" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:4px;vertical-align:middle"></span></button>
+        <div id="filter-panel" class="hidden" style="position:absolute;top:calc(100% + 6px);right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;width:240px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:200">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;letter-spacing:.05em">ÖNCELİK</div>
+          <div id="fp-priority" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px;letter-spacing:.05em">DURUM</div>
+          <div id="fp-status" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px"></div>
+          <div style="display:flex;justify-content:space-between;gap:8px;padding-top:10px;border-top:1px solid var(--border)">
+            <button onclick="clearFilters()" style="flex:1;padding:7px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);font-size:12px;font-weight:600;cursor:pointer;color:var(--text-dim)">Temizle</button>
+            <button onclick="applyFilters()" style="flex:1;padding:7px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:12px;font-weight:600;cursor:pointer">Uygula</button>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-add-main" onclick="openTaskModal()">＋ Yeni Görev</button>
+      <!-- DAVET BUTONU -->
+      <div class="invite-btn-wrap">
+        <button class="invite-btn" onclick="openInviteModal()">✉️ Davet Et</button>
+        <span class="invite-badge hidden" id="invite-badge">0</span>
+      </div>
+      <!-- USER WIDGET -->
+      <div class="user-widget" id="user-widget" onclick="toggleUserDropdown()">
+        <span id="topbar-avatar" style="width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0"></span>
+        <div>
+          <div class="user-widget-name" id="topbar-name">—</div>
+          <div class="user-widget-role" id="topbar-role">—</div>
+        </div>
+        <span style="color:var(--text-dim);font-size:11px;margin-left:2px">▾</span>
+        <div class="user-dropdown" id="user-dropdown">
+          <div class="ud-header">
+            <span id="dd-avatar" style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0"></span>
+            <div class="ud-info">
+              <div class="ud-name" id="dd-name">—</div>
+              <div class="ud-email" id="dd-email">—</div>
+            </div>
+          </div>
+          <div class="ud-item" onclick="openProfileModal('profile')">👤 Profil</div>
+          <div class="ud-item" onclick="openProfileModal('account')">⚙️ Hesap Ayarları</div>
+          <div class="ud-item" onclick="closeUserDropdown();openInviteModal()">✉️ Üye Davet Et</div>
+          <div class="ud-sep"></div>
+          <div class="ud-item danger" onclick="doLogout()">🚪 Çıkış Yap</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- TASKS PAGE -->
+    <div id="page-tasks">
+      <div class="stats-row">
+        <div class="stat-card"><div class="stat-label">Toplam Görev</div><div class="stat-value" id="stat-total">0</div><div class="stat-sub" id="stat-total-sub">tüm gruplar</div></div>
+        <div class="stat-card"><div class="stat-label">Tamamlanan</div><div class="stat-value" id="stat-done">0</div><div class="stat-sub" id="stat-done-pct">%0</div></div>
+        <div class="stat-card"><div class="stat-label">Aktif</div><div class="stat-value" id="stat-inprog">0</div><div class="stat-sub">devam eden</div></div>
+        <div class="stat-card" style="cursor:pointer" onclick="showFiltered('mine', document.querySelector('.nav-item:nth-child(2)'))">
+          <div class="stat-label">Geciken</div><div class="stat-value" id="stat-overdue" style="color:var(--red)">0</div><div class="stat-sub">acil</div>
+        </div>
+      </div>
+      <div id="overdue-banner" class="hidden" style="margin-bottom:12px;padding:10px 16px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:10px;display:flex;align-items:center;gap:10px;font-size:13px;color:#dc2626">
+        <span style="font-size:16px">⏰</span>
+        <span id="overdue-banner-text"></span>
+        <button onclick="showFiltered('overdue', this)" style="margin-left:auto;font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.1);color:#dc2626;cursor:pointer;font-weight:600">Göster →</button>
+      </div>
+      <div class="view-tabs">
+        <div class="view-tab active" onclick="setView('table',this)">📋 Liste</div>
+        <div class="view-tab" onclick="setView('kanban',this)">🗂️ Kanban</div>
+      </div>
+      <div id="table-view">
+        <table class="board-table">
+          <thead><tr>
+            <th style="width:28px"></th>
+            <th>Görev Adı</th><th>Durum</th><th>Öncelik</th><th>Sorumlu</th>
+            <th>Bitiş Tarihi</th><th>İlerleme</th><th style="width:50px"></th>
+          </tr></thead>
+          <tbody id="task-tbody"></tbody>
+        </table>
+      </div>
+      <div id="kanban-view" class="hidden">
+        <div class="kanban-board" id="kanban-board"></div>
+      </div>
+    </div>
+
+    <!-- TEAMS PAGE -->
+    <div id="page-teams" class="hidden">
+      <div class="teams-header">
+        <div>
+          <div class="teams-title">Çalışma Grupları</div>
+          <div class="teams-subtitle">Takımlarınızı oluşturun, üye ekleyin veya çıkarın</div>
+        </div>
+        <button class="btn btn-primary" onclick="openNewTeamModal()">＋ Yeni Grup Oluştur</button>
+      </div>
+      <div class="teams-grid" id="teams-grid"></div>
+    </div>
+
+    <!-- RAPORLAR SAYFASI -->
+    <div id="page-reports" class="hidden">
+      <div class="teams-header">
+        <div>
+          <div class="teams-title">Raporlar</div>
+          <div class="teams-subtitle">Görevlerin genel durumu ve ekip performansı</div>
+        </div>
+      </div>
+      <!-- Özet kartlar -->
+      <div id="report-summary" style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px"></div>
+      <!-- Grafikler -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">
+        <div class="stat-card" style="padding:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:16px;letter-spacing:.04em">DURUM DAĞILIMI</div>
+          <canvas id="chart-status" height="220"></canvas>
+        </div>
+        <div class="stat-card" style="padding:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:16px;letter-spacing:.04em">GRUBA GÖRE GÖREV</div>
+          <canvas id="chart-groups" height="220"></canvas>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px">
+        <div class="stat-card" style="padding:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:16px;letter-spacing:.04em">KİŞİ BAŞINA GÖREV</div>
+          <canvas id="chart-people" height="220"></canvas>
+        </div>
+        <div class="stat-card" style="padding:20px">
+          <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:16px;letter-spacing:.04em">GECİKEN GÖREVLER</div>
+          <div id="report-overdue-list" style="max-height:220px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AYARLAR SAYFASI -->
+    <div id="page-settings" class="hidden">
+      <div class="teams-header">
+        <div>
+          <div class="teams-title">Süreç Yönetimi</div>
+          <div class="teams-subtitle">İş akışı adımlarını özelleştirin, yeniden sıralayın veya yeni ekleyin</div>
+        </div>
+        <button class="btn btn-primary" onclick="openAddStatus()">＋ Yeni Süreç</button>
+      </div>
+      <div id="status-list" style="display:flex;flex-direction:column;gap:10px;max-width:560px"></div>
+      <div style="margin-top:32px;padding-top:24px;border-top:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;color:var(--text-muted);margin-bottom:12px;letter-spacing:.05em">TEHLİKELİ BÖLGE</div>
+        <button onclick="resetAllData()" style="padding:9px 18px;border-radius:9px;border:1px solid rgba(239,68,68,.4);background:rgba(239,68,68,.07);color:#dc2626;font-size:13px;font-weight:600;cursor:pointer">
+          🗑 Tüm Verileri Sıfırla
+        </button>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:6px">Tüm görevler, gruplar ve kişiler silinerek varsayılanlara döner.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- SÜREÇ MODAL -->
+<div class="modal-overlay" id="modal-status">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="status-modal-title">Yeni Süreç</div>
+      <button class="modal-close" onclick="closeModal('modal-status')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <div class="form-label">SÜREÇ ADI</div>
+        <input class="form-input" id="smod-label" placeholder="örn: Gözden Geçirme"/>
+      </div>
+      <div class="form-group" id="smod-key-wrap">
+        <div class="form-label">ANAHTAR <span style="font-size:11px;color:var(--text-dim)">(benzersiz, sadece harf/rakam/_)</span></div>
+        <input class="form-input" id="smod-key" placeholder="örn: in_review"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="form-label">NOKTA RENGİ</div>
+          <input type="color" id="smod-dot" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">YAZI RENGİ</div>
+          <input type="color" id="smod-color" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">ARKA PLAN</div>
+          <input type="color" id="smod-bg" value="#f3f0ff" style="width:100%;height:38px;border-radius:8px;border:1px solid var(--border);cursor:pointer;padding:2px"/>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-status')">İptal</button>
+      <button class="btn btn-primary" onclick="saveStatusModal()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- GÖREV MODAL -->
+<div class="modal-overlay" id="modal-task">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="task-modal-title">Yeni Görev Ekle</div>
+      <button class="modal-close" onclick="closeModal('modal-task')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><div class="form-label">GÖREV ADI</div><input class="form-input" id="new-name" placeholder="Görev adını girin..."/></div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">DURUM</div>
+          <select class="form-select" id="new-status">
+          </select></div>
+        <div class="form-group"><div class="form-label">ÖNCELİK</div>
+          <select class="form-select" id="new-priority">
+            <option value="low">Düşük</option><option value="medium">Orta</option>
+            <option value="high">Yüksek</option><option value="critical">Kritik</option>
+          </select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><div class="form-label">GRUP</div><select class="form-select" id="new-group"></select></div>
+        <div class="form-group"><div class="form-label">BİTİŞ TARİHİ</div><input class="form-input" type="date" id="new-date"/></div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">SORUMLULAR</div>
+        <div id="assignee-picker" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;border:1.5px solid var(--border);border-radius:10px;min-height:42px;cursor:pointer;background:var(--surface2)" onclick="toggleAssigneePicker()"></div>
+        <div id="assignee-dropdown" style="display:none;border:1.5px solid var(--border);border-radius:10px;background:var(--surface);box-shadow:0 4px 16px rgba(0,0,0,.1);max-height:180px;overflow-y:auto;margin-top:4px;z-index:100;position:relative"></div>
+      </div>
+      <div class="form-group" id="progress-group">
+        <div class="form-label">İLERLEME <span id="progress-val" style="color:var(--accent)">0%</span></div>
+        <input type="range" id="new-progress" min="0" max="100" step="5" value="0"
+          style="width:100%;accent-color:var(--accent);cursor:pointer"
+          oninput="document.getElementById('progress-val').textContent=this.value+'%'"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-task')">İptal</button>
+      <button class="btn btn-primary" id="task-modal-btn" onclick="addTask()">Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- YENİ GRUP MODAL -->
+<div class="modal-overlay" id="modal-new-team">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Yeni Çalışma Grubu</div>
+      <button class="modal-close" onclick="closeModal('modal-new-team')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><div class="form-label">GRUP ADI</div><input class="form-input" id="t-name" placeholder="örn: Pazarlama Ekibi"/></div>
+      <div class="form-group"><div class="form-label">AÇIKLAMA</div><input class="form-input" id="t-desc" placeholder="Kısa bir açıklama..."/></div>
+      <div class="form-group"><div class="form-label">İKON</div><div class="emoji-picker" id="ep-new"></div></div>
+      <div class="form-group"><div class="form-label">RENK</div><div class="color-picker" id="cp-new"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-new-team')">İptal</button>
+      <button class="btn btn-primary" onclick="createTeam()">Oluştur</button>
+    </div>
+  </div>
+</div>
+
+<!-- DÜZENLE MODAL -->
+<div class="modal-overlay" id="modal-edit-team">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">Grubu Düzenle</div>
+      <button class="modal-close" onclick="closeModal('modal-edit-team')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><div class="form-label">GRUP ADI</div><input class="form-input" id="et-name"/></div>
+      <div class="form-group"><div class="form-label">AÇIKLAMA</div><input class="form-input" id="et-desc"/></div>
+      <div class="form-group"><div class="form-label">İKON</div><div class="emoji-picker" id="ep-edit"></div></div>
+      <div class="form-group"><div class="form-label">RENK</div><div class="color-picker" id="cp-edit"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-edit-team')">İptal</button>
+      <button class="btn btn-primary" onclick="saveEditTeam()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ÜYE EKLE MODAL -->
+<div class="modal-overlay" id="modal-add-member">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="add-member-title">Üye Ekle</div>
+      <button class="modal-close" onclick="closeModal('modal-add-member')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><div class="form-label">KİŞİ SEÇ</div><div class="person-list" id="person-list"></div></div>
+      <div class="form-group"><div class="form-label">ROL</div>
+        <select class="form-select" id="member-role">
+          <option>Üye</option><option>Lider</option><option>Gözlemci</option><option>Yönetici</option>
+        </select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-add-member')">İptal</button>
+      <button class="btn btn-primary" onclick="confirmAddMember()">Gruba Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── DAVET MODAL ── -->
+<div class="modal-overlay" id="modal-invite">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">✉️ Üye Davet Et</div>
+      <button class="modal-close" onclick="closeModal('modal-invite')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="invite-tabs">
+        <div class="invite-tab active" id="itab-email" onclick="switchInviteTab('email')">E-posta ile</div>
+        <div class="invite-tab" id="itab-link" onclick="switchInviteTab('link')">Davet Linki</div>
+        <div class="invite-tab" id="itab-pending" onclick="switchInviteTab('pending')">Bekleyenler <span id="pending-count-badge"></span></div>
+      </div>
+
+      <!-- E-POSTA SEKMESİ -->
+      <div id="invite-panel-email">
+        <div class="form-group">
+          <div class="form-label">DAVET EDİLECEK E-POSTA</div>
+          <input class="form-input" id="invite-email-input" type="email" placeholder="ornek@sirket.com" onkeydown="if(event.key==='Enter')sendEmailInvite()"/>
+        </div>
+        <div class="form-row" style="margin-top:4px">
+          <div class="form-group">
+            <div class="form-label">ROL</div>
+            <select class="form-select" id="invite-role">
+              <option value="Üye">Üye</option>
+              <option value="Lider">Lider</option>
+              <option value="Yönetici">Yönetici</option>
+              <option value="Gözlemci">Gözlemci</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <div class="form-label">GRUBA EKLE (opsiyonel)</div>
+            <select class="form-select" id="invite-team">
+              <option value="">— Seçme —</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top:4px">
+          <div class="form-label" style="margin-bottom:6px">KİŞİSEL MESAJ (opsiyonel)</div>
+          <textarea class="form-input" id="invite-message" rows="2" placeholder="Merhaba! WorkBoard ekibimize katılmanızı isteriz..." style="resize:none;line-height:1.5"></textarea>
+        </div>
+      </div>
+
+      <!-- LİNK SEKMESİ -->
+      <div id="invite-panel-link" class="hidden">
+        <div class="form-group">
+          <div class="form-label">ROL</div>
+          <select class="form-select" id="link-role">
+            <option value="Üye">Üye</option>
+            <option value="Lider">Lider</option>
+            <option value="Yönetici">Yönetici</option>
+            <option value="Gözlemci">Gözlemci</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin-top:4px">
+          <div class="form-label">GEÇERLİLİK SÜRESİ</div>
+          <select class="form-select" id="link-expiry">
+            <option value="24">24 saat</option>
+            <option value="72">3 gün</option>
+            <option value="168" selected>1 hafta</option>
+            <option value="720">30 gün</option>
+            <option value="0">Süresiz</option>
+          </select>
+        </div>
+        <div id="link-box-wrap" class="hidden" style="margin-top:8px">
+          <div class="form-label" style="margin-bottom:6px">DAVET LİNKİ</div>
+          <div class="link-box">
+            <span class="link-url" id="generated-link">—</span>
+            <button class="copy-btn" id="copy-btn" onclick="copyInviteLink()">Kopyala</button>
+          </div>
+          <div class="invite-hint">🔒 Bu link yalnızca bir kez kullanılabilir. Paylaştığınız kişi kaydolduğunda otomatik olarak belirlenen rolle sisteme eklenir.</div>
+        </div>
+      </div>
+
+      <!-- BEKLEYENLEr SEKMESİ -->
+      <div id="invite-panel-pending" class="hidden">
+        <div class="pending-list" id="pending-list"></div>
+      </div>
+    </div>
+    <div class="modal-footer" id="invite-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-invite')">Kapat</button>
+      <button class="btn btn-primary" id="invite-action-btn" onclick="sendEmailInvite()">Davet Gönder</button>
+    </div>
+  </div>
+</div>
+
+<!-- DAVET KABUL EKRANI (link ile gelen simülasyon) -->
+<div class="modal-overlay" id="modal-accept-invite">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title">🎉 Davet</div>
+      <button class="modal-close" onclick="closeModal('modal-accept-invite')">✕</button>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:40px;margin-bottom:12px">👋</div>
+        <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:var(--text)" id="accept-title">Davete katıl</div>
+        <div style="font-size:13.5px;color:var(--text-muted);margin-top:6px" id="accept-sub">WorkBoard ekibine davet edildiniz</div>
+      </div>
+      <div class="form-group">
+        <div class="form-label">AD SOYAD</div>
+        <input class="form-input" id="accept-name" placeholder="Adınız Soyadınız"/>
+      </div>
+      <div class="form-group">
+        <div class="form-label">E-POSTA</div>
+        <input class="form-input" id="accept-email" type="email" placeholder="ornek@sirket.com"/>
+      </div>
+      <div class="form-group">
+        <div class="form-label">ŞİFRE BELİRLE</div>
+        <input class="form-input" id="accept-pass" type="password" placeholder="En az 6 karakter"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-accept-invite')">İptal</button>
+      <button class="btn btn-primary" onclick="acceptInvite()">Katıl →</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROFİL / HESAP AYARLARI MODAL -->
+<div class="modal-overlay" id="modal-profile">
+  <div class="modal modal-sm">
+    <div class="modal-header">
+      <div class="modal-title" id="profile-modal-title">👤 Profil</div>
+      <button class="modal-close" onclick="closeModal('modal-profile')">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- Sekme -->
+      <div style="display:flex;gap:4px;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:20px">
+        <button id="ptab-profile" onclick="switchProfileTab('profile')"
+          style="flex:1;padding:7px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);color:var(--text);box-shadow:0 1px 4px rgba(0,0,0,.08)">👤 Profil</button>
+        <button id="ptab-account" onclick="switchProfileTab('account')"
+          style="flex:1;padding:7px;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;background:transparent;color:var(--text-dim)">⚙️ Hesap</button>
+      </div>
+
+      <!-- Profil sekmesi -->
+      <div id="ptab-body-profile">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+          <div id="profile-avatar-preview" style="width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700;color:#fff;flex-shrink:0"></div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)" id="profile-name-preview">—</div>
+            <div style="font-size:12px;color:var(--text-dim)" id="profile-email-preview">—</div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">AD SOYAD</div>
+          <input class="form-input" id="profile-name" placeholder="Adınız Soyadınız"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">ÜNVAN</div>
+          <input class="form-input" id="profile-title" placeholder="Yazılım Geliştirici"/>
+        </div>
+        <div class="form-group">
+          <div class="form-label">ROL</div>
+          <select class="form-input" id="profile-role">
+            <option value="Üye">Üye</option>
+            <option value="Lider">Lider</option>
+            <option value="Yönetici">Yönetici</option>
+            <option value="Gözlemci">Gözlemci</option>
+            <option value="Danışman">Danışman</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <div class="form-label">RENK</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap" id="profile-colors">
+            <div onclick="selectProfileColor('#6c63ff')" data-color="#6c63ff" style="width:28px;height:28px;border-radius:50%;background:#6c63ff;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#10b981')" data-color="#10b981" style="width:28px;height:28px;border-radius:50%;background:#10b981;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#fb923c')" data-color="#fb923c" style="width:28px;height:28px;border-radius:50%;background:#fb923c;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#3b82f6')" data-color="#3b82f6" style="width:28px;height:28px;border-radius:50%;background:#3b82f6;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#f59e0b')" data-color="#f59e0b" style="width:28px;height:28px;border-radius:50%;background:#f59e0b;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#ef4444')" data-color="#ef4444" style="width:28px;height:28px;border-radius:50%;background:#ef4444;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#8b5cf6')" data-color="#8b5cf6" style="width:28px;height:28px;border-radius:50%;background:#8b5cf6;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+            <div onclick="selectProfileColor('#ec4899')" data-color="#ec4899" style="width:28px;height:28px;border-radius:50%;background:#ec4899;cursor:pointer;border:2px solid transparent;transition:all .15s"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hesap sekmesi -->
+      <div id="ptab-body-account" class="hidden">
+        <div class="form-group">
+          <div class="form-label">E-POSTA</div>
+          <input class="form-input" id="account-email" type="email" placeholder="ornek@sirket.com"/>
+        </div>
+        <div style="padding:12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);margin-bottom:16px">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:12px">ŞİFRE DEĞİŞTİR</div>
+          <div class="form-group" style="margin-bottom:10px">
+            <div class="form-label">MEVCUT ŞİFRE</div>
+            <input class="form-input" id="account-pass-old" type="password" placeholder="Mevcut şifreniz"/>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <div class="form-label">YENİ ŞİFRE</div>
+            <input class="form-input" id="account-pass-new" type="password" placeholder="En az 6 karakter"/>
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <div class="form-label">YENİ ŞİFRE (TEKRAR)</div>
+            <input class="form-input" id="account-pass-confirm" type="password" placeholder="Yeni şifrenizi tekrar girin"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-profile')">İptal</button>
+      <button class="btn btn-primary" onclick="saveProfileModal()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- KİŞİ YÖNETİM PANELİ -->
+<div class="people-panel" id="people-panel">
+  <div class="pp-handle" onclick="togglePeoplePanel()">
+    <div class="pp-handle-left">
+      <span style="font-size:16px">👤</span>
+      <span class="pp-title">Kişiler</span>
+      <span class="pp-count" id="pp-count">0</span>
+    </div>
+    <span class="pp-chevron">▲</span>
+  </div>
+  <div class="pp-body">
+    <div class="pp-search">
+      <span style="color:var(--text-dim);font-size:13px">🔍</span>
+      <input type="text" placeholder="Kişi ara..." id="pp-search-input" oninput="renderPeoplePanel()">
+    </div>
+    <div class="pp-people" id="pp-list"></div>
+
+    <!-- FORM TOGGLE -->
+    <button class="pp-toggle-btn" id="pp-form-toggle" onclick="toggleAddForm()">＋ Yeni Kişi Ekle</button>
+
+    <!-- EKLE FORMU -->
+    <div class="pp-add-form hidden" id="pp-add-form">
+      <div class="pp-add-title">Yeni Kişi</div>
+      <input class="pp-input" id="pp-pname" placeholder="Ad Soyad (örn: Ali Vural)"/>
+      <input class="pp-input" id="pp-pemail" type="email" placeholder="E-posta (örn: ali@sirket.com)"/>
+      <input class="pp-input" id="pp-ptitle" placeholder="Ünvan (örn: Tasarımcı)"/>
+      <select class="pp-input" id="pp-prole" style="cursor:pointer;appearance:none;background-image:url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E\");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;">
+        <option value="Üye">Üye</option>
+        <option value="Lider">Lider</option>
+        <option value="Yönetici">Yönetici</option>
+        <option value="Gözlemci">Gözlemci</option>
+        <option value="Danışman">Danışman</option>
+      </select>
+      <div style="font-size:11px;font-weight:600;color:var(--text-dim);margin-bottom:2px">RENK</div>
+      <div class="pp-color-row" id="pp-color-row"></div>
+      <button class="pp-add-btn" onclick="addPerson()">Kişiyi Ekle</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+const DEFAULT_STATUS = [
+  {key:'todo',   label:'Yapılacak',    bg:'#f1f2f6',             color:'#6b7280',dot:'#9ca3af'},
+  {key:'inprog', label:'Devam Ediyor', bg:'rgba(59,130,246,.1)', color:'#2563eb',dot:'#3b82f6'},
+  {key:'review', label:'İncelemede',   bg:'rgba(245,158,11,.1)', color:'#d97706',dot:'#f59e0b'},
+  {key:'done',   label:'Tamamlandı',   bg:'rgba(16,185,129,.1)', color:'#059669',dot:'#10b981'},
+  {key:'stuck',  label:'Takıldı',      bg:'rgba(239,68,68,.1)',  color:'#dc2626',dot:'#ef4444'},
+];
+let statusList = ls('wb_status', DEFAULT_STATUS);
+// STATUS objesi statusList'ten dinamik türetiliyor
+function getSTATUS(){ const o={}; statusList.forEach(s=>o[s.key]=s); return o; }
+let STATUS = getSTATUS();
+
+// ── YETKİ SİSTEMİ ─────────────────────────────────────
+function getMyRole(){ return currentUser?.role || 'Üye'; }
+function isAdmin(){ return getMyRole() === 'Yönetici'; }
+function isLeader(){ const r=getMyRole(); return r==='Yönetici'||r==='Lider'; }
+function canDo(action){
+  const role = getMyRole();
+  switch(action){
+    case 'deleteAnyPerson': return role==='Yönetici';
+    case 'editAnyPerson':   return role==='Yönetici';
+    case 'deleteAnyTask':   return role==='Yönetici'||role==='Lider';
+    case 'editAnyTask':     return role==='Yönetici'||role==='Lider';
+    case 'deleteTeam':      return role==='Yönetici';
+    case 'editTeam':        return role==='Yönetici'||role==='Lider';
+    case 'addMember':       return role==='Yönetici'||role==='Lider';
+    case 'removeMember':    return role==='Yönetici'||role==='Lider';
+    case 'manageStatus':    return role==='Yönetici';
+    case 'resetData':       return role==='Yönetici';
+    default:                return true;
+  }
+}
+function requirePerm(action, msg){
+  if(!canDo(action)){ showToast(`🚫 ${msg||'Bu işlem için yetkiniz yok'}`); return false; }
+  return true;
+}
+
+const PRIORITY = {
+  low:     {label:'Düşük',  bg:'#f3f4f6',              color:'#6b7280'},
+  medium:  {label:'Orta',   bg:'rgba(245,158,11,.1)',   color:'#d97706'},
+  high:    {label:'Yüksek', bg:'rgba(249,115,22,.1)',   color:'#ea580c'},
+  critical:{label:'Kritik', bg:'rgba(239,68,68,.1)',    color:'#dc2626'},
+};
+const COLORS  = ['#6c63ff','#22d3a5','#f472b6','#f5c542','#60a5fa','#fb923c','#f56565','#a78bfa'];
+const EMOJIS  = ['🚀','💡','🎯','🛠️','📊','🎨','💼','🌟','⚡','🔥','🏆','🤝','🧩','📣','🔬'];
+
+// ── VARSAYILAN VERİ ───────────────────────────────────
+const DEFAULT_PEOPLE = [
+  {id:'AY',name:'Ayşe Yılmaz',  title:'Pazarlama Müdürü',    role:'Lider',    color:'#6c63ff'},
+  {id:'MK',name:'Mehmet Kaya',   title:'Backend Geliştirici', role:'Üye',      color:'#22d3a5'},
+  {id:'ZD',name:'Zeynep Demir',  title:'Grafik Tasarımcı',   role:'Üye',      color:'#f472b6'},
+  {id:'EO',name:'Emre Öztürk',   title:'Frontend Geliştirici',role:'Üye',      color:'#f5c542'},
+  {id:'SK',name:'Selin Korkmaz', title:'Müşteri Temsilcisi',  role:'Üye',      color:'#60a5fa'},
+  {id:'BT',name:'Burak Tekin',   title:'Ürün Müdürü',        role:'Yönetici', color:'#fb923c'},
+  {id:'NA',name:'Nisan Arslan',  title:'UX Tasarımcı',       role:'Üye',      color:'#a78bfa'},
+  {id:'CE',name:'Can Erdoğan',   title:'DevOps Mühendisi',   role:'Üye',      color:'#34d399'},
+];
+const DEFAULT_TEAMS = [
+  {id:1,name:'Pazarlama',       desc:'Kampanya ve içerik üretimi',  icon:'📊',color:'#6c63ff',
+   members:[{pid:'AY',role:'Lider'},{pid:'ZD',role:'Üye'},{pid:'SK',role:'Üye'}]},
+  {id:2,name:'Ürün Geliştirme', desc:'Backend, frontend ve DevOps', icon:'🛠️',color:'#22d3a5',
+   members:[{pid:'MK',role:'Lider'},{pid:'EO',role:'Üye'},{pid:'CE',role:'Üye'},{pid:'BT',role:'Yönetici'}]},
+  {id:3,name:'Destek',          desc:'Müşteri ilişkileri',          icon:'🤝',color:'#f472b6',
+   members:[{pid:'SK',role:'Lider'},{pid:'AY',role:'Gözlemci'}]},
+];
+const DEFAULT_TASKS = [
+  {id:1, name:'Web sitesi yenileme planı',      status:'done',   priority:'high',    assignee:'AY',date:'2026-03-01',progress:100,grp:1},
+  {id:2, name:'Q1 pazarlama kampanyası',         status:'inprog', priority:'critical',assignee:'ZD',date:'2026-03-12',progress:65, grp:1},
+  {id:3, name:'Sosyal medya içerik takvimi',     status:'todo',   priority:'medium',  assignee:'SK',date:'2026-03-20',progress:0,  grp:1},
+  {id:4, name:'E-posta bülteni şablonu',         status:'review', priority:'low',     assignee:'MK',date:'2026-03-10',progress:85, grp:1},
+  {id:5, name:'Mobil uygulama v2.0',             status:'inprog', priority:'critical',assignee:'EO',date:'2026-04-01',progress:40, grp:2},
+  {id:6, name:'API entegrasyon testleri',        status:'inprog', priority:'high',    assignee:'MK',date:'2026-03-15',progress:50, grp:2},
+  {id:7, name:'Veritabanı optimizasyonu',        status:'todo',   priority:'medium',  assignee:'EO',date:'2026-03-25',progress:0,  grp:2},
+  {id:8, name:'CI/CD pipeline kurulumu',         status:'stuck',  priority:'high',    assignee:'MK',date:'2026-03-08',progress:30, grp:2},
+  {id:9, name:'Müşteri şikayeti #4821',          status:'done',   priority:'critical',assignee:'AY',date:'2026-03-05',progress:100,grp:3},
+  {id:10,name:'Onboarding güncellemesi',         status:'todo',   priority:'medium',  assignee:'SK',date:'2026-03-28',progress:0,  grp:3},
+];
+
+function ls(key, def){ try{ const v=localStorage.getItem(key); return v?JSON.parse(v):def; }catch(e){ return def; } }
+function lsSet(key, val){ try{ localStorage.setItem(key, JSON.stringify(val)); }catch(e){} }
+
+// ── FIREBASE ──────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyD6t4XJZERwXUbRlvEYYbo2z8s257OP9Zw",
+  authDomain: "edtech-5e09f.firebaseapp.com",
+  projectId: "edtech-5e09f",
+  storageBucket: "edtech-5e09f.firebasestorage.app",
+  messagingSenderId: "307734369472",
+  appId: "1:307734369472:web:7ed8e19511bc5ee92a0925"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// Workspace ID — tüm veriler bu koleksiyon altında
+const WS = 'default';
+
+let fbSaveTimeout = null;
+function saveAll(){
+  // Önce localStorage'a yaz (anlık)
+  lsSet('wb_people', people);
+  lsSet('wb_teams',  teams);
+  lsSet('wb_tasks',  tasks);
+  lsSet('wb_invites',invites);
+  lsSet('wb_nextId', nextId);
+  lsSet('wb_nextTeamId', nextTeamId);
+  lsSet('wb_status', statusList);
+  // Firestore'a debounce ile yaz (300ms)
+  if(fbSaveTimeout) clearTimeout(fbSaveTimeout);
+  fbSaveTimeout = setTimeout(()=>{
+    if(!auth.currentUser) return;
+    db.collection('workspaces').doc(WS).set({
+      people, teams, tasks, invites, nextId, nextTeamId, statusList,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, {merge:true}).catch(e=>console.warn('FB save error:',e));
+  }, 300);
+}
+
+async function loadFromFirebase(){
+  try {
+    const doc = await db.collection('workspaces').doc(WS).get();
+    if(doc.exists){
+      const d = doc.data();
+      if(d.people)     { people     = d.people;     lsSet('wb_people', people); }
+      if(d.teams)      { teams      = d.teams;      lsSet('wb_teams',  teams); }
+      if(d.tasks)      { tasks      = d.tasks;      lsSet('wb_tasks',  tasks); }
+      if(d.invites)    { invites    = d.invites;    lsSet('wb_invites',invites); }
+      if(d.nextId)     { nextId     = d.nextId;     lsSet('wb_nextId', nextId); }
+      if(d.nextTeamId) { nextTeamId = d.nextTeamId; lsSet('wb_nextTeamId', nextTeamId); }
+      if(d.statusList) { statusList = d.statusList; lsSet('wb_status', statusList); }
+    }
+  } catch(e){ console.warn('FB load error:', e); }
+}
+
+let people  = ls('wb_people', DEFAULT_PEOPLE);
+let teams   = ls('wb_teams',  DEFAULT_TEAMS);
+let tasks   = ls('wb_tasks',  DEFAULT_TASKS);
+
+// taskGroups artık teams'den dinamik türetiliyor
+const taskGroups = new Proxy([], {
+  get(_, prop) {
+    const arr = teams.map(t=>({name:t.name, color:t.color, id:t.id}));
+    if(prop === 'length') return arr.length;
+    if(prop === 'forEach') return arr.forEach.bind(arr);
+    if(prop === 'map') return arr.map.bind(arr);
+    if(prop === 'find') return arr.find.bind(arr);
+    const idx = parseInt(prop);
+    return isNaN(idx) ? arr[prop] : arr[idx];
+  }
+});
+
+let currentView='table';
+let nextId     = ls('wb_nextId',     11);
+let nextTeamId = ls('wb_nextTeamId', 4);
+let newEmoji='🚀', newColor=COLORS[0];
+let editEmoji='🚀', editColor=COLORS[0], editingId=null;
+let addMemberTeamId=null, selectedPerson=null;
+
+// ── HELPERS ───────────────────────────────────────────
+const getPerson = id => people.find(p=>p.id===id)||{id,name:id,color:'#6c63ff',title:''};
+const fmtDate = d => d ? new Date(d).toLocaleDateString('tr-TR',{day:'numeric',month:'short'}) : '';
+const isOverdue = d => d && new Date(d)<new Date() && new Date(d).toDateString()!==new Date().toDateString();
+const isSoon = d => { if(!d) return false; const df=(new Date(d)-new Date())/(864e5); return df>=0&&df<=3; };
+
+function avt(id,sz=26){
+  const p=getPerson(id), fs=sz<=26?11:sz<=38?14:18;
+  return `<span class="avatar" style="width:${sz}px;height:${sz}px;font-size:${fs}px;background:${p.color};color:#fff;border:2px solid var(--surface)">${p.id}</span>`;
+}
+function getTaskAssigneeAvatars(t, sz=26){
+  const ids = Array.isArray(t.assignees) ? t.assignees : (t.assignee ? [t.assignee] : []);
+  if(!ids.length) return '<span style="width:26px;height:26px;border-radius:50%;background:var(--surface2);border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim)">?</span>';
+  return ids.slice(0,3).map(id=>avt(id,sz)).join('') + (ids.length>3 ? `<span class="avatar" style="width:${sz}px;height:${sz}px;font-size:11px;background:var(--surface2);color:var(--text-dim);border:2px solid var(--surface)">+${ids.length-3}</span>` : '');
+}
+const sts = s => { const c = statusList.find(x=>x.key===s) || {bg:'#f1f2f6',color:'#6b7280',dot:'#9ca3af',label:s}; return `<span class="status-badge" style="background:${c.bg};color:${c.color}"><span class="status-dot" style="background:${c.dot}"></span>${c.label}</span>`; };
+const pri = p => { const c=PRIORITY[p]; return `<span class="priority-badge" style="background:${c.bg};color:${c.color}">${c.label}</span>`; };
+const prg = v => { const col=v>=80?'var(--green)':v>=40?'var(--accent)':'var(--yellow)'; return `<div class="progress-wrap"><div class="progress-bar"><div class="progress-fill" style="width:${v}%;background:${col}"></div></div><span class="progress-pct">${v}%</span></div>`; };
+
+// ── NAV ───────────────────────────────────────────────
+function renderTeamsNav(){
+  document.getElementById('teams-nav').innerHTML = teams.map(t=>`
+    <div class="nav-item nav-team-item" onclick="showTeamTasks(${t.id},this)" style="padding-right:6px">
+      <span class="board-dot" style="background:${t.color}"></span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</span>
+      <span style="font-size:11px;color:var(--text-dim);margin-right:4px">${t.members.length}</span>
+      <span class="nav-team-actions">
+        <span class="nav-team-btn" onclick="event.stopPropagation();openEditTeam(${t.id})" title="Düzenle">✏️</span>
+        <span class="nav-team-btn nav-team-del" onclick="event.stopPropagation();deleteTeam(${t.id})" title="Sil">🗑</span>
+      </span>
+    </div>`).join('');
+}
+
+function updateBreadcrumb(label){
+  const sep = document.getElementById('breadcrumb-sep');
+  const cur = document.getElementById('breadcrumb-current');
+  if(label){
+    sep.classList.remove('hidden');
+    cur.classList.remove('hidden');
+    cur.textContent = label;
+  } else {
+    sep.classList.add('hidden');
+    cur.classList.add('hidden');
+  }
+}
+
+function showTeamTasks(teamId, el){
+  taskFilter = 'all';
+  setNav(el);
+  document.getElementById('page-tasks').classList.remove('hidden');
+  document.getElementById('page-teams').classList.add('hidden');
+  document.getElementById('page-settings').classList.add('hidden');
+  document.getElementById('page-reports').classList.add('hidden');
+  document.getElementById('page-title').textContent = team ? team.name : 'Görevler';
+  document.getElementById('btn-add-main').textContent = '＋ Yeni Görev';
+  document.getElementById('btn-add-main').onclick = () => openTaskModal(teamId);
+  document.getElementById('search-wrap').style.display = '';
+  document.getElementById('btn-filter').style.display = '';
+  updateBreadcrumb(team ? `${team.icon} ${team.name}` : '');
+  taskFilter = 'team_' + teamId;
+  render();
+}
+function setNav(el){ document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active')); el&&el.classList.add('active'); }
+
+// ── PAGE SWITCH ───────────────────────────────────────
+let taskFilter = 'all'; // 'all' | 'mine' | 'week'
+
+// ── FILTER PANEL ─────────────────────────────────────
+let filterPriority = []; // seçili öncelikler
+let filterStatus   = []; // seçili durumlar
+
+function toggleFilterPanel(){
+  const panel = document.getElementById('filter-panel');
+  const isOpen = !panel.classList.contains('hidden');
+  if(isOpen){ panel.classList.add('hidden'); return; }
+  // Öncelik butonları
+  document.getElementById('fp-priority').innerHTML = Object.entries(PRIORITY).map(([key,p])=>
+    `<button onclick="toggleFP('priority','${key}',this)"
+      style="padding:4px 10px;border-radius:20px;border:1px solid ${filterPriority.includes(key)?p.color:' var(--border)'};
+      background:${filterPriority.includes(key)?p.bg:'var(--surface2)'};color:${filterPriority.includes(key)?p.color:'var(--text-dim)'};
+      font-size:11.5px;font-weight:600;cursor:pointer">${p.label}</button>`
+  ).join('');
+  // Durum butonları
+  document.getElementById('fp-status').innerHTML = statusList.map(s=>
+    `<button onclick="toggleFP('status','${s.key}',this)"
+      style="padding:4px 10px;border-radius:20px;border:1px solid ${filterStatus.includes(s.key)?s.dot:'var(--border)'};
+      background:${filterStatus.includes(s.key)?s.bg:'var(--surface2)'};color:${filterStatus.includes(s.key)?s.color:'var(--text-dim)'};
+      font-size:11.5px;font-weight:600;cursor:pointer">${s.label}</button>`
+  ).join('');
+  panel.classList.remove('hidden');
+}
+
+function toggleFP(type, key, btn){
+  const arr = type==='priority' ? filterPriority : filterStatus;
+  const idx = arr.indexOf(key);
+  const p = type==='priority' ? PRIORITY[key] : statusList.find(s=>s.key===key);
+  if(idx===-1){
+    arr.push(key);
+    btn.style.borderColor = type==='priority' ? p.color : p.dot;
+    btn.style.background  = p.bg;
+    btn.style.color       = type==='priority' ? p.color : p.color;
+  } else {
+    arr.splice(idx,1);
+    btn.style.borderColor='var(--border)';
+    btn.style.background='var(--surface2)';
+    btn.style.color='var(--text-dim)';
+  }
+}
+
+function applyFilters(){
+  document.getElementById('filter-panel').classList.add('hidden');
+  const hasFilter = filterPriority.length||filterStatus.length;
+  const dot = document.getElementById('filter-active-dot');
+  dot.classList.toggle('hidden', !hasFilter);
+  dot.style.display = hasFilter ? 'inline-block' : 'none';
+  render();
+}
+
+function clearFilters(){
+  filterPriority = []; filterStatus = [];
+  document.getElementById('filter-active-dot').classList.add('hidden');
+  document.getElementById('filter-panel').classList.add('hidden');
+  render();
+}
+
+// Dışarı tıklayınca kapat
+document.addEventListener('click', e=>{
+  const panel = document.getElementById('filter-panel');
+  if(panel && !panel.classList.contains('hidden') && !e.target.closest('#filter-panel') && !e.target.closest('#btn-filter')){
+    panel.classList.add('hidden');
+  }
+});
+
+function showFiltered(filter, el){
+  taskFilter = filter;
+  setNav(el);
+  const titles = {mine:'Bana Atananlar', week:'Bu Hafta', overdue:'Geciken Görevler'};
+  document.getElementById('page-tasks').classList.remove('hidden');
+  document.getElementById('page-teams').classList.add('hidden');
+  document.getElementById('page-settings').classList.add('hidden');
+  document.getElementById('page-reports').classList.add('hidden');
+  document.getElementById('page-title').textContent = titles[filter] || 'Görevler';
+  document.getElementById('btn-add-main').textContent = '＋ Yeni Görev';
+  document.getElementById('btn-add-main').onclick = openTaskModal;
+  document.getElementById('search-wrap').style.display = '';
+  document.getElementById('btn-filter').style.display = '';
+  updateBreadcrumb(titles[filter] || '');
+  render();
+}
+
+function showPage(page, el){
+  taskFilter = 'all';
+  setNav(el);
+  document.getElementById('page-tasks').classList.toggle('hidden', page!=='tasks');
+  document.getElementById('page-teams').classList.toggle('hidden', page!=='teams');
+  document.getElementById('page-settings').classList.toggle('hidden', page!=='settings');
+  document.getElementById('page-reports').classList.toggle('hidden', page!=='reports');
+  const title=document.getElementById('page-title');
+  const btnAdd=document.getElementById('btn-add-main');
+  const sw=document.getElementById('search-wrap');
+  const bf=document.getElementById('btn-filter');
+  if(page==='teams'){
+    title.textContent='Çalışma Grupları';
+    btnAdd.textContent='＋ Yeni Grup'; btnAdd.onclick=openNewTeamModal;
+    sw.style.display='none'; bf.style.display='none';
+    updateBreadcrumb('Çalışma Grupları');
+    renderTeamsPage();
+  } else if(page==='settings'){
+    title.textContent='Ayarlar';
+    btnAdd.textContent='＋ Yeni Süreç'; btnAdd.onclick=openAddStatus;
+    sw.style.display='none'; bf.style.display='none';
+    updateBreadcrumb('Ayarlar');
+    renderStatusList();
+  } else if(page==='reports'){
+    title.textContent='Raporlar';
+    btnAdd.style.display='none';
+    sw.style.display='none'; bf.style.display='none';
+    updateBreadcrumb('Raporlar');
+    renderReports();
+  } else {
+    title.textContent='Tüm Görevler';
+    btnAdd.textContent='＋ Yeni Görev'; btnAdd.onclick=openTaskModal;
+    btnAdd.style.display='';
+    sw.style.display=''; bf.style.display='';
+    updateBreadcrumb(null);
+    render();
+  }
+}
+
+// ── TEAMS PAGE ────────────────────────────────────────
+function renderTeamsPage(){
+  const grid=document.getElementById('teams-grid');
+  if(!teams.length){
+    grid.innerHTML=`<div class="no-teams"><div style="font-size:48px;margin-bottom:12px">👥</div><div style="font-size:15px;font-weight:600;color:var(--text-muted)">Henüz çalışma grubu yok</div><div style="font-size:13px;margin-top:6px">"Yeni Grup Oluştur" ile başlayın</div></div>`;
+    return;
+  }
+  grid.innerHTML = teams.map((t,i)=>{
+    const taskCnt = tasks.filter(tk=>taskGroups[tk.grp]?.name===t.name).length;
+    const mRows = t.members.map(m=>{
+      const p=getPerson(m.pid);
+      return `<div class="member-row">
+        ${avt(p.id,32)}
+        <div class="member-info">
+          <div class="member-name">${p.name}</div>
+          <div class="member-role">${p.title} · <span style="color:var(--accent);font-weight:600">${m.role}</span></div>
+        </div>
+        <button class="member-remove-btn" onclick="removeMember(${t.id},'${m.pid}')" title="Gruptan çıkar">✕</button>
+      </div>`;
+    }).join('');
+    return `<div class="team-card" style="animation-delay:${i*.06}s">
+      <div class="team-card-header">
+        <div style="position:absolute;top:0;left:0;right:0;height:3px;background:${t.color};border-radius:16px 16px 0 0"></div>
+        <div class="team-icon" style="background:${t.color}22">${t.icon}</div>
+        <div class="team-info">
+          <div class="team-name">${t.name}</div>
+          <div class="team-desc">${t.desc||'Açıklama eklenmemiş'}</div>
+        </div>
+        <div class="team-actions">
+          <div class="team-action-btn" onclick="openEditTeam(${t.id})" title="Düzenle">✏️</div>
+          <div class="team-action-btn danger" onclick="deleteTeam(${t.id})" title="Sil">🗑</div>
+        </div>
+      </div>
+      <div class="team-members">
+        <div class="team-members-title">ÜYELER (${t.members.length})</div>
+        <div class="members-list">${mRows||'<div class="empty-members">Henüz üye eklenmemiş</div>'}</div>
+      </div>
+      <div class="team-footer">
+        <span class="team-stat">👤 <strong>${t.members.length}</strong> üye</span>
+        <span class="team-stat" style="margin-left:10px">📋 <strong>${taskCnt}</strong> görev</span>
+        <button class="add-member-btn" onclick="openAddMember(${t.id})">＋ Üye Ekle</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── TEAM CRUD ─────────────────────────────────────────
+function openNewTeamModal(){
+  newEmoji='🚀'; newColor=COLORS[0];
+  document.getElementById('t-name').value='';
+  document.getElementById('t-desc').value='';
+  buildPicker('ep-new','emoji','new');
+  buildPicker('cp-new','color','new');
+  document.getElementById('modal-new-team').classList.add('open');
+}
+function createTeam(){
+  const name=document.getElementById('t-name').value.trim();
+  if(!name){document.getElementById('t-name').style.borderColor='var(--red)';return;}
+  document.getElementById('t-name').style.borderColor='';
+  teams.push({id:nextTeamId++,name,desc:document.getElementById('t-desc').value.trim(),icon:newEmoji,color:newColor,members:[]});
+  saveAll();
+  closeModal('modal-new-team');
+  renderTeamsNav(); renderTeamsPage();
+  showToast('✅ Grup oluşturuldu: '+name);
+}
+function deleteTeam(id){
+  if(!requirePerm('deleteTeam','Grup silmek için Yönetici yetkisi gereklidir')) return;
+  const t=teams.find(x=>x.id===id);
+  if(!confirm(`"${t.name}" grubunu silmek istiyor musunuz?`)) return;
+  teams=teams.filter(x=>x.id!==id);
+  saveAll();
+  renderTeamsNav(); renderTeamsPage();
+  showToast('🗑️ Grup silindi');
+}
+function openEditTeam(id){
+  if(!requirePerm('editTeam','Grup düzenlemek için Lider veya Yönetici yetkisi gereklidir')) return;
+  const t=teams.find(x=>x.id===id); if(!t) return;
+  editingId=id; editEmoji=t.icon; editColor=t.color;
+  document.getElementById('et-name').value=t.name;
+  document.getElementById('et-desc').value=t.desc||'';
+  buildPicker('ep-edit','emoji','edit');
+  buildPicker('cp-edit','color','edit');
+  document.getElementById('modal-edit-team').classList.add('open');
+}
+function saveEditTeam(){
+  const name=document.getElementById('et-name').value.trim(); if(!name) return;
+  const t=teams.find(x=>x.id===editingId); if(!t) return;
+  t.name=name; t.desc=document.getElementById('et-desc').value.trim();
+  t.icon=editEmoji; t.color=editColor;
+  saveAll();
+  closeModal('modal-edit-team');
+  renderTeamsNav(); renderTeamsPage();
+  showToast('✅ Grup güncellendi');
+}
+
+// ── MEMBERS ───────────────────────────────────────────
+function openAddMember(teamId){
+  if(!requirePerm('addMember','Üye eklemek için Lider veya Yönetici yetkisi gereklidir')) return;
+  addMemberTeamId=teamId; selectedPerson=null;
+  const t=teams.find(x=>x.id===teamId);
+  document.getElementById('add-member-title').textContent=`"${t.name}" Grubuna Üye Ekle`;
+  const existing=t.members.map(m=>m.pid);
+  const avail=people.filter(p=>!existing.includes(p.id));
+  const list=document.getElementById('person-list');
+  list.innerHTML = avail.length
+    ? avail.map(p=>`
+        <div class="person-item" id="pi-${p.id}" onclick="selPerson('${p.id}')">
+          ${avt(p.id,32)}
+          <div class="member-info"><div class="person-item-name">${p.name}</div><div class="person-item-title">${p.title}</div></div>
+          <div class="person-item-check">✓</div>
+        </div>`).join('')
+    : '<div style="text-align:center;padding:16px;color:var(--text-dim);font-size:13px">Tüm kişiler zaten bu grupta</div>';
+  document.getElementById('modal-add-member').classList.add('open');
+}
+function selPerson(id){
+  selectedPerson=id;
+  document.querySelectorAll('.person-item').forEach(el=>el.classList.remove('selected'));
+  document.getElementById('pi-'+id)?.classList.add('selected');
+}
+function confirmAddMember(){
+  if(!selectedPerson){showToast('⚠️ Lütfen bir kişi seçin');return;}
+  const t=teams.find(x=>x.id===addMemberTeamId); if(!t) return;
+  const role=document.getElementById('member-role').value;
+  t.members.push({pid:selectedPerson,role});
+  saveAll();
+  closeModal('modal-add-member');
+  renderTeamsPage(); renderTeamsNav();
+  showToast(`✅ ${getPerson(selectedPerson).name} gruba eklendi`);
+}
+function removeMember(teamId,pid){
+  if(!requirePerm('removeMember','Üye çıkarmak için Lider veya Yönetici yetkisi gereklidir')) return;
+  const t=teams.find(x=>x.id===teamId); if(!t) return;
+  const p=getPerson(pid);
+  t.members=t.members.filter(m=>m.pid!==pid);
+  saveAll();
+  renderTeamsPage(); renderTeamsNav();
+  showToast(`🗑️ ${p.name} gruptan çıkarıldı`);
+}
+
+// ── PICKERS ───────────────────────────────────────────
+function buildPicker(containerId, type, mode){
+  const el=document.getElementById(containerId);
+  if(type==='emoji'){
+    el.innerHTML=EMOJIS.map(e=>`<div class="emoji-option ${(mode==='new'?newEmoji:editEmoji)===e?'selected':''}"
+      onclick="pickEmoji('${e}','${containerId}','${mode}')">${e}</div>`).join('');
+  } else {
+    el.innerHTML=COLORS.map(c=>`<div class="color-swatch ${(mode==='new'?newColor:editColor)===c?'selected':''}"
+      style="background:${c}" onclick="pickColor('${c}','${containerId}','${mode}')"></div>`).join('');
+  }
+}
+function pickEmoji(e,cid,mode){ if(mode==='new') newEmoji=e; else editEmoji=e; buildPicker(cid,'emoji',mode); }
+function pickColor(c,cid,mode){ if(mode==='new') newColor=c; else editColor=c; buildPicker(cid,'color',mode); }
+
+// ── TASKS ─────────────────────────────────────────────
+function render(){
+  if(currentView==='table') renderTable();
+  else renderKanban();
+}
+function setView(v,el){
+  currentView=v;
+  document.querySelectorAll('.view-tab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  document.getElementById('table-view').classList.toggle('hidden',v!=='table');
+  document.getElementById('kanban-view').classList.toggle('hidden',v!=='kanban');
+  render();
+}
+function renderTable(){
+  const term = document.getElementById('search-input').value.toLowerCase();
+  const myId = currentUser ? people.find(p => p.name === currentUser.name || p.email === currentUser.email)?.id : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+7);
+  function passFilter(t){
+    const tIds=Array.isArray(t.assignees)?t.assignees:(t.assignee?[t.assignee]:[]); if(taskFilter === 'mine') return tIds.includes(myId);
+    if(taskFilter === 'overdue') return isOverdue(t.date) && t.status !== 'done';
+    if(taskFilter === 'week'){
+      if(!t.date) return false;
+      const d = new Date(t.date); return d >= today && d <= weekEnd;
+    }
+    if(taskFilter.startsWith('team_')) return t.grp === parseInt(taskFilter.split('_')[1]);
+    return true;
+  }
+  function passExtraFilter(t){
+    if(filterPriority.length && !filterPriority.includes(t.priority)) return false;
+    if(filterStatus.length   && !filterStatus.includes(t.status))     return false;
+    return true;
+  }
+  const isTeamFilter = taskFilter.startsWith('team_');
+  const teamFilterId = isTeamFilter ? parseInt(taskFilter.split('_')[1]) : null;
+  let html = '';
+  teams.forEach((team) => {
+    if(isTeamFilter && team.id !== teamFilterId) return;
+    const gt = tasks.filter(t => t.grp===team.id && passFilter(t) && passExtraFilter(t) && (!term || t.name.toLowerCase().includes(term)));
+    if(!isTeamFilter && taskFilter !== 'all' && gt.length === 0) return;
+    const prev = team.members.slice(0,5).map(m=>avt(m.pid)).join('');
+    html += `<tr><td colspan="8"><div class="group-header">
+      <div class="group-color" style="background:${team.color}"></div>
+      <span class="group-name">${team.name}</span>
+      <span class="group-count">${gt.length}</span>
+      ${prev?`<div style="display:flex;margin-left:8px">${prev}</div>`:''}
+    </div></td></tr>`;
+    gt.forEach(t => {
+      const ov=isOverdue(t.date)&&t.status!=='done', sn=isSoon(t.date)&&t.status!=='done';
+      html += `<tr class="task-row">
+        <td><span class="task-check${t.status==='done'?' done':''}" onclick="toggleDone(${t.id})">${t.status==='done'?'✓':''}</span></td>
+        <td><div class="task-name-cell">${getTaskAssigneeAvatars(t)}<span class="task-name${t.status==='done'?' done-text':''}">${t.name}</span></div></td>
+        <td>${sts(t.status)}</td><td>${pri(t.priority)}</td><td><div style="display:flex;gap:2px">${getTaskAssigneeAvatars(t)}</div></td>
+        <td><span class="date-cell${ov?' date-overdue':sn?' date-soon':''}">${fmtDate(t.date)}${ov?' ⚠':''}</span></td>
+        <td>${prg(t.progress)}</td>
+        <td><div class="row-actions"><div class="row-action-btn" onclick="openEditTask(${t.id})" title="Düzenle">✏️</div><div class="row-action-btn" onclick="deleteTask(${t.id})" title="Sil">🗑</div></div></td>
+      </tr>`;
+    });
+    html += `<tr class="add-task-row"><td colspan="8"><button class="add-task-btn" onclick="openTaskModal(${team.id})">＋ Görev ekle</button></td></tr>`;
+  });
+  if(!html) html = `<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--text-dim);font-size:14px">
+    ${taskFilter==='mine' ? '👤 Size atanmış görev yok' : taskFilter==='overdue' ? '✅ Geciken görev yok' : taskFilter.startsWith('team_') ? '📋 Bu grupta henüz görev yok' : '📅 Bu hafta bitiş tarihi olan görev yok'}</td></tr>`;
+  document.getElementById('task-tbody').innerHTML = html;
+  updateStats();
+}
+function renderKanban(){
+  const term = document.getElementById('search-input').value.toLowerCase();
+  const myId = currentUser ? people.find(p => p.name === currentUser.name || p.email === currentUser.email)?.id : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+7);
+  const kanbanTeamIds = new Set(teams.map(t=>t.id));
+  function passFilter(t){
+    if(!kanbanTeamIds.has(t.grp)) return false;
+    const tIds=Array.isArray(t.assignees)?t.assignees:(t.assignee?[t.assignee]:[]); if(taskFilter === 'mine') return tIds.includes(myId);
+    if(taskFilter === 'overdue') return isOverdue(t.date) && t.status !== 'done';
+    if(taskFilter === 'week'){ if(!t.date) return false; const d=new Date(t.date); return d>=today&&d<=weekEnd; }
+    if(taskFilter.startsWith('team_')) return t.grp === parseInt(taskFilter.split('_')[1]);
+    return true;
+  }
+  function passExtraFilter(t){
+    if(filterPriority.length && !filterPriority.includes(t.priority)) return false;
+    if(filterStatus.length   && !filterStatus.includes(t.status))     return false;
+    return true;
+  }
+  const board = document.getElementById('kanban-board');
+  board.innerHTML = statusList.map((sc) => {
+    const s = sc.key;
+    const st = tasks.filter(t => t.status===s && passFilter(t) && passExtraFilter(t) && (!term || t.name.toLowerCase().includes(term)));
+    const cards = st.map(t => {
+      const pc = PRIORITY[t.priority];
+      const ov = isOverdue(t.date) && t.status !== 'done';
+      const sn = isSoon(t.date) && t.status !== 'done';
+      const cardBorder = ov ? 'border-color:#ef4444;box-shadow:0 0 0 1px rgba(239,68,68,.2)' : sn ? 'border-color:#f59e0b;box-shadow:0 0 0 1px rgba(245,158,11,.15)' : '';
+      const dateColor  = ov ? 'color:#dc2626;font-weight:600' : sn ? 'color:#d97706;font-weight:600' : 'color:var(--text-dim)';
+      const dateIcon   = ov ? '🔴' : sn ? '🟡' : '';
+      const overdueBar = ov ? `<div style="height:3px;background:linear-gradient(90deg,#ef4444,#f87171);border-radius:0 0 10px 10px;margin:-12px -12px 10px;"></div>` : sn ? `<div style="height:3px;background:linear-gradient(90deg,#f59e0b,#fbbf24);border-radius:0 0 10px 10px;margin:-12px -12px 10px;"></div>` : '';
+      return `<div class="kanban-card" draggable="true" data-id="${t.id}" data-status="${s}" style="${cardBorder}">
+        ${overdueBar}
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:10px">
+          <div class="kanban-card-title" style="margin-bottom:0">${t.name}</div>
+          <div style="display:flex;gap:4px;flex-shrink:0">
+            <button onclick="event.stopPropagation();openEditTask(${t.id})" title="Düzenle"
+              style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-dim);transition:all .15s"
+              onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">✏️</button>
+            <button onclick="event.stopPropagation();deleteTask(${t.id})" title="Sil"
+              style="width:22px;height:22px;border-radius:5px;border:1px solid var(--border);background:var(--surface);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-dim);transition:all .15s"
+              onmouseover="this.style.borderColor='#ef4444';this.style.color='#ef4444'"
+              onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">🗑</button>
+          </div>
+        </div>
+        <div class="kanban-card-footer">
+          <span class="priority-badge" style="background:${pc.bg};color:${pc.color};font-size:11px">${pc.label}</span>
+          <div style="display:flex;gap:2px">${getTaskAssigneeAvatars(t)}</div>
+          <span style="font-size:11.5px;margin-left:auto;${dateColor}">${dateIcon} ${fmtDate(t.date)}</span>
+        </div>
+        ${t.progress>0 ? `<div style="margin-top:8px">${prg(t.progress)}</div>` : ''}
+      </div>`;
+    }).join('');
+    return `<div class="kanban-col" data-status="${s}">
+      <div class="kanban-col-header">
+        <span style="width:10px;height:10px;border-radius:50%;background:${sc.dot};display:inline-block"></span>
+        <span class="kanban-col-title">${sc.label}</span>
+        <span class="kanban-col-count">${st.length}</span>
+      </div>
+      <div class="kanban-cards" data-status="${s}">${cards}</div>
+      <button class="kanban-add-btn" onclick="openTaskModal()">＋ Ekle</button>
+    </div>`;
+  }).join('');
+
+  // ── Sürükle-bırak olayları ───────────────────────
+  let dragId = null;
+
+  board.querySelectorAll('.kanban-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      dragId = parseInt(card.dataset.id);
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Placeholder boyutu için ghost
+      e.dataTransfer.setData('text/plain', dragId);
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      board.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+      board.querySelectorAll('.kanban-drop-placeholder').forEach(p => p.remove());
+    });
+  });
+
+  board.querySelectorAll('.kanban-col').forEach(col => {
+    const targetStatus = col.dataset.status;
+    const cardsEl = col.querySelector('.kanban-cards');
+
+    col.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      board.querySelectorAll('.kanban-col').forEach(c => c.classList.remove('drag-over'));
+      col.classList.add('drag-over');
+      // Placeholder göster
+      if (!cardsEl.querySelector('.kanban-drop-placeholder')) {
+        board.querySelectorAll('.kanban-drop-placeholder').forEach(p => p.remove());
+        const ph = document.createElement('div');
+        ph.className = 'kanban-drop-placeholder';
+        cardsEl.appendChild(ph);
+      }
+    });
+
+    col.addEventListener('dragleave', e => {
+      if (!col.contains(e.relatedTarget)) {
+        col.classList.remove('drag-over');
+        cardsEl.querySelector('.kanban-drop-placeholder')?.remove();
+      }
+    });
+
+    col.addEventListener('drop', e => {
+      e.preventDefault();
+      col.classList.remove('drag-over');
+      cardsEl.querySelector('.kanban-drop-placeholder')?.remove();
+      if (dragId === null) return;
+      const task = tasks.find(t => t.id === dragId);
+      if (task && task.status !== targetStatus) {
+        task.status = targetStatus;
+        if (targetStatus === 'done') task.progress = 100;
+        saveAll();
+        renderKanban();
+        updateStats();
+        const sc = statusList.find(x=>x.key===targetStatus) || {label:targetStatus};
+        showToast(`✅ "${task.name}" → ${sc.label}`);
+      }
+      dragId = null;
+    });
+  });
+
+  updateStats();
+}
+// ── REPORTS ──────────────────────────────────────────
+function renderReports(){
+  const teamIds = new Set(teams.map(t=>t.id));
+  const validTasks = tasks.filter(t => teamIds.has(t.grp));
+
+  // Özet kartlar
+  const total = validTasks.length;
+  const done  = validTasks.filter(t=>t.status==='done').length;
+  const ov    = validTasks.filter(t=>isOverdue(t.date)&&t.status!=='done').length;
+  const pct   = total ? Math.round(done/total*100) : 0;
+  document.getElementById('report-summary').innerHTML = `
+    <div class="stat-card"><div class="stat-label">Toplam Görev</div><div class="stat-value">${total}</div><div class="stat-sub">tüm gruplar</div></div>
+    <div class="stat-card"><div class="stat-label">Tamamlanan</div><div class="stat-value" style="color:var(--green)">${done}</div><div class="stat-sub">%${pct} oran</div></div>
+    <div class="stat-card"><div class="stat-label">Devam Eden</div><div class="stat-value" style="color:var(--accent)">${total-done}</div><div class="stat-sub">aktif</div></div>
+    <div class="stat-card"><div class="stat-label">Geciken</div><div class="stat-value" style="color:var(--red)">${ov}</div><div class="stat-sub">acil</div></div>`;
+
+  // Yardımcı: canvas çiz
+  function drawBar(canvasId, labels, values, colors){
+    const canvas = document.getElementById(canvasId);
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const W = canvas.parentElement.clientWidth - 40;
+    canvas.width = W; canvas.height = 220;
+    ctx.clearRect(0,0,W,220);
+    if(!values.length || values.every(v=>v===0)){ ctx.fillStyle='#aaa'; ctx.font='13px sans-serif'; ctx.fillText('Henüz veri yok',W/2-40,110); return; }
+    const max = Math.max(...values) || 1;
+    const barW = Math.min(48, (W - 40) / labels.length - 12);
+    const gap  = (W - 40) / labels.length;
+    const chartH = 160;
+    // Grid lines
+    ctx.strokeStyle = '#e2e5ee'; ctx.lineWidth = 1;
+    for(let i=0;i<=4;i++){
+      const y = 10 + chartH - (i/4)*chartH;
+      ctx.beginPath(); ctx.moveTo(30,y); ctx.lineTo(W-10,y); ctx.stroke();
+      ctx.fillStyle='#9ca3af'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+      ctx.fillText(Math.round(max*i/4), 26, y+3);
+    }
+    labels.forEach((lbl,i)=>{
+      const x = 30 + i*gap + gap/2 - barW/2;
+      const barH = (values[i]/max)*chartH;
+      const y = 10 + chartH - barH;
+      // Bar
+      ctx.fillStyle = colors[i % colors.length];
+      ctx.beginPath();
+      ctx.roundRect ? ctx.roundRect(x,y,barW,barH,4) : ctx.rect(x,y,barW,barH);
+      ctx.fill();
+      // Değer
+      ctx.fillStyle='#1a1d2e'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+      if(values[i]>0) ctx.fillText(values[i], x+barW/2, y-4);
+      // Etiket
+      ctx.fillStyle='#6b7280'; ctx.font='11px sans-serif';
+      const shortLbl = lbl.length>8 ? lbl.slice(0,7)+'…' : lbl;
+      ctx.fillText(shortLbl, x+barW/2, 185);
+    });
+  }
+
+  // 1) Durum dağılımı
+  const statusColors = ['#6c63ff','#10b981','#fb923c','#ef4444','#3b82f6','#f59e0b','#8b5cf6'];
+  const statusLabels = statusList.map(s=>s.label);
+  const statusVals   = statusList.map(s=>validTasks.filter(t=>t.status===s.key).length);
+  drawBar('chart-status', statusLabels, statusVals, statusList.map(s=>s.dot));
+
+  // 2) Gruba göre görev
+  const groupLabels = teams.map(t=>t.name);
+  const groupVals   = teams.map(t=>validTasks.filter(x=>x.grp===t.id).length);
+  const groupColors = teams.map(t=>t.color);
+  drawBar('chart-groups', groupLabels, groupVals, groupColors);
+
+  // 3) Kişi başına görev
+  const personMap = {};
+  validTasks.forEach(t=>{
+    const ids = Array.isArray(t.assignees) ? t.assignees : (t.assignee ? [t.assignee] : []);
+    ids.forEach(id => {
+      const p = people.find(x=>x.id===id);
+      const name = p ? p.name.split(' ')[0] : id;
+      personMap[name] = (personMap[name]||0)+1;
+    });
+  });
+  const pLabels = Object.keys(personMap);
+  const pVals   = Object.values(personMap);
+  const pColors = ['#6c63ff','#10b981','#fb923c','#3b82f6','#f59e0b','#8b5cf6','#ef4444'];
+  drawBar('chart-people', pLabels, pVals, pColors);
+
+  // 4) Geciken görevler listesi
+  const overdueList = validTasks.filter(t=>isOverdue(t.date)&&t.status!=='done');
+  const ovEl = document.getElementById('report-overdue-list');
+  if(!overdueList.length){
+    ovEl.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text-dim);font-size:13px">✅ Geciken görev yok</div>`;
+  } else {
+    ovEl.innerHTML = overdueList.map(t=>{
+      const ids = Array.isArray(t.assignees) ? t.assignees : (t.assignee ? [t.assignee] : []);
+      const names = ids.map(id=>people.find(x=>x.id===id)?.name).filter(Boolean).join(', ') || 'Atanmamış';
+      const team = teams.find(x=>x.id===t.grp);
+      const daysLate = Math.floor((new Date()-new Date(t.date))/(1000*60*60*24));
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:18px">🔴</span>
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.name}</div>
+          <div style="font-size:11px;color:var(--text-dim)">${team?team.name:''} · ${names}</div>
+        </div>
+        <span style="font-size:11px;color:#dc2626;font-weight:600;white-space:nowrap">${daysLate}g gecikti</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function updateStats(){
+  const myId = currentUser ? people.find(p=>p.name===currentUser.name||p.email===currentUser.email)?.id : null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const weekEnd = new Date(today); weekEnd.setDate(today.getDate()+7);
+  const teamIds = new Set(teams.map(t=>t.id));
+
+  function visibleFilter(t){
+    if(!teamIds.has(t.grp)) return false; // geçersiz grup → gizle
+    const tIds2=Array.isArray(t.assignees)?t.assignees:(t.assignee?[t.assignee]:[]); if(taskFilter==='mine') return tIds2.includes(myId);
+    if(taskFilter==='overdue') return isOverdue(t.date)&&t.status!=='done';
+    if(taskFilter==='week'){ if(!t.date) return false; const d=new Date(t.date); return d>=today&&d<=weekEnd; }
+    if(taskFilter.startsWith('team_')) return t.grp===parseInt(taskFilter.split('_')[1]);
+    return true;
+  }
+  const visible = tasks.filter(visibleFilter);
+  const total  = visible.length;
+  const done   = visible.filter(t=>t.status==='done').length;
+  const active = visible.filter(t=>t.status!=='done').length;
+  const ov     = tasks.filter(t=>teamIds.has(t.grp)&&isOverdue(t.date)&&t.status!=='done').length;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-total-sub').textContent = taskFilter==='all' ? 'tüm gruplar' : `${total} sonuç`;
+  document.getElementById('stat-done').textContent = done;
+  document.getElementById('stat-done-pct').textContent = `%${total?Math.round(done/total*100):0} tamamlandı`;
+  document.getElementById('stat-inprog').textContent = active;
+  document.getElementById('stat-overdue').textContent = ov;
+  document.getElementById('total-badge').textContent = tasks.filter(t=>teamIds.has(t.grp)).length;
+  const banner = document.getElementById('overdue-banner');
+  if(ov>0){
+    document.getElementById('overdue-banner-text').textContent=`${ov} görevin tarihi geçmiş — hemen ilgilenilmesi gerekiyor.`;
+    banner.classList.remove('hidden'); banner.style.display='flex';
+  } else {
+    banner.classList.add('hidden'); banner.style.display='none';
+  }
+}
+function toggleDone(id){
+  const t=tasks.find(x=>x.id===id); if(!t) return;
+  t.status=t.status==='done'?'todo':'done';
+  if(t.status==='done') t.progress=100;
+  saveAll(); render();
+}
+function deleteTask(id){
+  const t = tasks.find(x=>x.id===id);
+  const myPerson = people.find(p=>p.name===currentUser?.name||p.email===currentUser?.email);
+  const isOwn = myPerson && (Array.isArray(t?.assignees) ? t.assignees.includes(myPerson.id) : t?.assignee===myPerson.id);
+  if(!isOwn && !canDo('deleteAnyTask')){ showToast('🚫 Yalnızca Lider veya Yönetici görev silebilir'); return; }
+  tasks=tasks.filter(x=>x.id!==id); saveAll(); render(); showToast('🗑️ Görev silindi');
+}
+
+// ── ASSIGNEE PICKER ───────────────────────────────────
+let selectedAssignees = [];
+
+function initAssigneePicker(current=[]){
+  selectedAssignees = Array.isArray(current) ? [...current] : (current ? [current] : []);
+  renderAssigneePicker();
+}
+
+function renderAssigneePicker(){
+  const picker = document.getElementById('assignee-picker');
+  if(!picker) return;
+  if(selectedAssignees.length === 0){
+    picker.innerHTML = '<span style="color:var(--text-dim);font-size:13px;padding:2px 4px">Kişi seçin...</span>';
+  } else {
+    picker.innerHTML = selectedAssignees.map(id => {
+      const p = people.find(x=>x.id===id);
+      if(!p) return '';
+      return `<div style="display:flex;align-items:center;gap:4px;background:var(--accent)18;border:1px solid var(--accent)40;border-radius:20px;padding:2px 8px 2px 4px;font-size:12px;font-weight:600;color:var(--accent)">
+        ${avt(id,20)}<span>${p.name.split(' ')[0]}</span>
+        <span onclick="removeAssignee('${id}');event.stopPropagation()" style="cursor:pointer;margin-left:2px;color:var(--text-dim)">✕</span>
+      </div>`;
+    }).join('');
+  }
+  renderAssigneeDropdown();
+}
+
+function renderAssigneeDropdown(){
+  const dd = document.getElementById('assignee-dropdown');
+  if(!dd) return;
+  dd.innerHTML = people.map(p => {
+    const sel = selectedAssignees.includes(p.id);
+    return `<div onclick="toggleAssignee('${p.id}')" style="display:flex;align-items:center;gap:10px;padding:8px 12px;cursor:pointer;background:${sel?'var(--accent)10':'transparent'};transition:background .1s"
+      onmouseover="this.style.background='var(--surface2)'" onmouseout="this.style.background='${sel?'var(--accent)10':'transparent'}'">
+      ${avt(p.id,28)}
+      <span style="font-size:13px;font-weight:500;color:var(--text);flex:1">${p.name}</span>
+      ${sel?'<span style="color:var(--accent);font-weight:700">✓</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function toggleAssigneePicker(){
+  const dd = document.getElementById('assignee-dropdown');
+  if(!dd) return;
+  dd.style.display = dd.style.display==='none' ? 'block' : 'none';
+}
+
+function toggleAssignee(id){
+  if(selectedAssignees.includes(id)){
+    selectedAssignees = selectedAssignees.filter(x=>x!==id);
+  } else {
+    selectedAssignees.push(id);
+  }
+  renderAssigneePicker();
+}
+
+function removeAssignee(id){
+  selectedAssignees = selectedAssignees.filter(x=>x!==id);
+  renderAssigneePicker();
+}
+
+// Dışarı tıklanınca kapat
+document.addEventListener('click', e=>{
+  const dd = document.getElementById('assignee-dropdown');
+  const picker = document.getElementById('assignee-picker');
+  if(dd && picker && !dd.contains(e.target) && !picker.contains(e.target)){
+    dd.style.display='none';
+  }
+});
+
+// ── TASK MODAL ────────────────────────────────────────
+let editingTaskId = null;
+
+function openTaskModal(grp=null){
+  editingTaskId = null;
+  document.getElementById('task-modal-title').textContent = 'Yeni Görev Ekle';
+  document.getElementById('task-modal-btn').textContent = 'Ekle';
+  document.getElementById('task-modal-btn').onclick = addTask;
+  document.getElementById('new-group').innerHTML = teams.map(t=>`<option value="${t.id}">${t.icon} ${t.name}</option>`).join('');
+  document.getElementById('new-status').innerHTML = statusList.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+  initAssigneePicker([]);
+  if(grp !== null) document.getElementById('new-group').value = grp;
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-date').value = '';
+  document.getElementById('new-status').value = statusList[0]?.key || 'todo';
+  document.getElementById('new-priority').value = 'medium';
+  document.getElementById('new-progress').value = 0;
+  document.getElementById('progress-val').textContent = '0%';
+  document.getElementById('modal-task').classList.add('open');
+}
+
+function openEditTask(id){
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  const myPerson = people.find(p=>p.name===currentUser?.name||p.email===currentUser?.email);
+  const taskAssignees = Array.isArray(t.assignees) ? t.assignees : (t.assignee ? [t.assignee] : []);
+  const isOwn = myPerson && taskAssignees.includes(myPerson.id);
+  if(!isOwn && !canDo('editAnyTask')){ showToast('🚫 Yalnızca kendi görevinizi veya Lider/Yönetici düzenleyebilir'); return; }
+  editingTaskId = id;
+  document.getElementById('task-modal-title').textContent = 'Görevi Düzenle';
+  document.getElementById('task-modal-btn').textContent = 'Kaydet';
+  document.getElementById('task-modal-btn').onclick = saveEditTask;
+  document.getElementById('new-group').innerHTML = teams.map(tm=>`<option value="${tm.id}">${tm.icon} ${tm.name}</option>`).join('');
+  document.getElementById('new-status').innerHTML = statusList.map(s=>`<option value="${s.key}">${s.label}</option>`).join('');
+  initAssigneePicker(taskAssignees);
+  document.getElementById('new-name').value = t.name;
+  document.getElementById('new-status').value = t.status;
+  document.getElementById('new-priority').value = t.priority;
+  document.getElementById('new-group').value = t.grp;
+  document.getElementById('new-date').value = t.date || '';
+  document.getElementById('new-progress').value = t.progress || 0;
+  document.getElementById('progress-val').textContent = (t.progress||0)+'%';
+  document.getElementById('modal-task').classList.add('open');
+}
+
+const EMAILJS_TASK_TEMPLATE_ID = 'template_9syh1uv';
+
+function sendTaskAssignmentEmail(task, previousAssignees){
+  const prev = Array.isArray(previousAssignees) ? previousAssignees : (previousAssignees ? [previousAssignees] : []);
+  const curr = Array.isArray(task.assignees) ? task.assignees : (task.assignee ? [task.assignee] : []);
+  const newOnes = curr.filter(id => !prev.includes(id));
+  if(!newOnes.length) return;
+  const team = teams.find(t=>t.id===task.grp);
+  const priorityLabels = {low:'Düşük', medium:'Orta', high:'Yüksek', critical:'Kritik'};
+  newOnes.forEach(id => {
+    const assigneePerson = people.find(p=>p.id===id);
+    if(!assigneePerson) return;
+    const email = assigneePerson.email || Object.entries(userDB).find(([k,v])=>v.name===assigneePerson.name)?.[0];
+    if(!email) { console.warn('Atanan kişinin e-postası bulunamadı:', assigneePerson.name); return; }
+    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TASK_TEMPLATE_ID, {
+      to_email:      email,
+      assignee_name: assigneePerson.name,
+      assigned_by:   currentUser?.name || 'WorkBoard',
+      task_name:     task.name,
+      priority:      priorityLabels[task.priority] || task.priority,
+      due_date:      task.date ? new Date(task.date).toLocaleDateString('tr-TR') : 'Belirtilmemiş',
+      group_name:    team?.name || 'Genel',
+      app_link:      location.origin + location.pathname
+    }).then(()=>{
+      showToast(`📧 ${assigneePerson.name} e-posta ile bilgilendirildi`);
+    }).catch(e=>{ console.warn('Görev mail hatası:', e); });
+  });
+}
+
+function addTask(){
+  const name = document.getElementById('new-name').value.trim();
+  if(!name){ document.getElementById('new-name').style.borderColor='var(--red)'; return; }
+  document.getElementById('new-name').style.borderColor='';
+  const grpVal = parseInt(document.getElementById('new-group').value);
+  const grpId = isNaN(grpVal) ? (teams[0]?.id || 1) : grpVal;
+  tasks.push({id:nextId++, name,
+    status:    document.getElementById('new-status').value,
+    priority:  document.getElementById('new-priority').value,
+    assignees: [...selectedAssignees],
+    date:      document.getElementById('new-date').value,
+    progress:  parseInt(document.getElementById('new-progress').value)||0,
+    grp:       grpId});
+  saveAll();
+  const newTask = tasks[tasks.length-1];
+  sendTaskAssignmentEmail(newTask, []);
+  closeModal('modal-task');
+  document.getElementById('new-name').value='';
+  render(); showToast('✅ Görev eklendi!');
+}
+
+function saveEditTask(){
+  const t = tasks.find(x=>x.id===editingTaskId); if(!t) return;
+  const name = document.getElementById('new-name').value.trim();
+  if(!name){ document.getElementById('new-name').style.borderColor='var(--red)'; return; }
+  document.getElementById('new-name').style.borderColor='';
+  const prevAssignees = Array.isArray(t.assignees) ? [...t.assignees] : (t.assignee ? [t.assignee] : []);
+  t.name      = name;
+  t.status    = document.getElementById('new-status').value;
+  t.priority  = document.getElementById('new-priority').value;
+  t.assignees = [...selectedAssignees];
+  delete t.assignee; // eski alan temizle
+  t.date     = document.getElementById('new-date').value;
+  t.progress = parseInt(document.getElementById('new-progress').value)||0;
+  const grpVal2 = parseInt(document.getElementById('new-group').value);
+  t.grp = isNaN(grpVal2) ? (teams[0]?.id || 1) : grpVal2;
+  editingTaskId = null;
+  saveAll();
+  sendTaskAssignmentEmail(t, prevAssignees);
+  closeModal('modal-task');
+  render(); showToast('✅ Görev güncellendi');
+}
+
+function resetAllData(){
+  if(!requirePerm('resetData','Verileri sıfırlamak için Yönetici yetkisi gereklidir')) return;
+  if(!confirm('Tüm veriler silinecek ve varsayılanlara dönülecek. Emin misiniz?')) return;
+  ['wb_people','wb_teams','wb_tasks','wb_invites','wb_nextId','wb_nextTeamId','wb_status','wb_session','wb_users'].forEach(k=>{
+    try{ localStorage.removeItem(k); }catch(e){}
+  });
+  // Firestore'dan da sil
+  db.collection('workspaces').doc(WS).delete().catch(()=>{});
+  location.reload();
+}
+
+// ── SÜREÇ YÖNETİMİ ───────────────────────────────────
+function renderStatusList(){
+  const el = document.getElementById('status-list'); if(!el) return;
+  el.innerHTML = statusList.map((s,i) => `
+    <div style="display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+      <div style="width:14px;height:14px;border-radius:50%;background:${s.dot};flex-shrink:0"></div>
+      <span class="status-badge" style="background:${s.bg};color:${s.color};font-size:12px;padding:3px 10px;border-radius:6px">${s.label}</span>
+      <span style="font-size:12px;color:var(--text-dim);font-family:monospace">key: ${s.key}</span>
+      <div style="margin-left:auto;display:flex;gap:6px;align-items:center">
+        <button onclick="moveStatus(${i},-1)" ${i===0?'disabled':''} style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;${i===0?'opacity:.35':''}">↑</button>
+        <button onclick="moveStatus(${i},1)" ${i===statusList.length-1?'disabled':''} style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;${i===statusList.length-1?'opacity:.35':''}">↓</button>
+        <button onclick="editStatus(${i})" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px">✏️</button>
+        <button onclick="deleteStatus('${s.key}')" style="width:26px;height:26px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;font-size:12px;color:var(--red)" ${statusList.length<=2?'disabled title="En az 2 süreç gerekli"':''}>🗑</button>
+      </div>
+    </div>`).join('');
+}
+
+function moveStatus(i, dir){
+  const j = i + dir;
+  if(j<0||j>=statusList.length) return;
+  [statusList[i],statusList[j]] = [statusList[j],statusList[i]];
+  STATUS = getSTATUS(); saveAll(); renderStatusList();
+}
+
+function deleteStatus(key){
+  if(!requirePerm('manageStatus','Durum yönetimi için Yönetici yetkisi gereklidir')) return;
+  const inUse = tasks.some(t=>t.status===key);
+  const s = statusList.find(x=>x.key===key);
+  if(inUse && !confirm(`"${s.label}" adımında görevler var. Silmek istediğinizde bu görevlerin durumu "todo" olarak sıfırlanır. Devam?`)) return;
+  if(inUse) tasks.forEach(t=>{ if(t.status===key) t.status='todo'; });
+  statusList = statusList.filter(x=>x.key!==key);
+  STATUS = getSTATUS(); saveAll(); renderStatusList();
+  showToast('🗑️ Süreç silindi');
+}
+
+let editingStatusIdx = null;
+function openAddStatus(){
+  editingStatusIdx = null;
+  document.getElementById('status-modal-title').textContent = 'Yeni Süreç';
+  document.getElementById('smod-label').value = '';
+  document.getElementById('smod-key').value = '';
+  document.getElementById('smod-dot').value = '#6c63ff';
+  document.getElementById('smod-color').value = '#6c63ff';
+  document.getElementById('smod-bg').value = '#f3f0ff';
+  document.getElementById('smod-key-wrap').style.display = '';
+  document.getElementById('modal-status').classList.add('open');
+}
+function editStatus(i){
+  editingStatusIdx = i;
+  const s = statusList[i];
+  document.getElementById('status-modal-title').textContent = 'Süreç Düzenle';
+  document.getElementById('smod-label').value = s.label;
+  document.getElementById('smod-key').value = s.key;
+  document.getElementById('smod-dot').value = s.dot||'#6c63ff';
+  document.getElementById('smod-color').value = s.color||'#6c63ff';
+  document.getElementById('smod-bg').value = '#ffffff';
+  document.getElementById('smod-key-wrap').style.display = 'none'; // key değiştirilemez
+  document.getElementById('modal-status').classList.add('open');
+}
+function saveStatusModal(){
+  const label = document.getElementById('smod-label').value.trim();
+  if(!label){ document.getElementById('smod-label').style.borderColor='var(--red)'; return; }
+  document.getElementById('smod-label').style.borderColor='';
+  const dot   = document.getElementById('smod-dot').value;
+  const color = document.getElementById('smod-color').value;
+  const bg    = document.getElementById('smod-bg').value;
+  const bgRgba = bg; // kullanıcı hex verdi, direkt kullan
+  if(editingStatusIdx !== null){
+    statusList[editingStatusIdx].label = label;
+    statusList[editingStatusIdx].dot   = dot;
+    statusList[editingStatusIdx].color = color;
+    statusList[editingStatusIdx].bg    = bgRgba;
+  } else {
+    let key = document.getElementById('smod-key').value.trim()
+      .toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
+    if(!key) key = 'status_'+Date.now();
+    if(statusList.find(x=>x.key===key)){ showToast('⚠️ Bu anahtar zaten kullanımda'); return; }
+    statusList.push({key, label, bg:bgRgba, color, dot});
+  }
+  STATUS = getSTATUS(); saveAll();
+  closeModal('modal-status');
+  renderStatusList();
+  showToast('✅ Süreç kaydedildi');
+}
+
+// ── UTILS ─────────────────────────────────────────────
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function showToast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2500); }
+
+['modal-task','modal-new-team','modal-edit-team','modal-add-member','modal-invite','modal-accept-invite','modal-status'].forEach(id=>{
+  document.getElementById(id).addEventListener('click',function(e){if(e.target===this)closeModal(id);});
+});
+
+// ── KİŞİ PANELİ ──────────────────────────────────────
+let ppOpen = false;
+let ppAddOpen = false;
+let ppSelColor = COLORS[0];
+let editingPersonId = null;
+
+function togglePeoplePanel(){
+  ppOpen = !ppOpen;
+  document.getElementById('people-panel').classList.toggle('open', ppOpen);
+  document.getElementById('pp-trigger').classList.toggle('panel-open', ppOpen);
+  if(ppOpen){ renderPeoplePanel(); buildPPColors(); }
+}
+
+function toggleAddForm(){
+  ppAddOpen = !ppAddOpen;
+  document.getElementById('pp-add-form').classList.toggle('hidden', !ppAddOpen);
+  document.getElementById('pp-form-toggle').textContent = ppAddOpen ? '✕ İptal' : '＋ Yeni Kişi Ekle';
+  if(ppAddOpen){ document.getElementById('pp-pname').focus(); }
+}
+
+function buildPPColors(){
+  const row = document.getElementById('pp-color-row');
+  row.innerHTML = COLORS.map(c =>
+    `<div class="pp-swatch${ppSelColor===c?' sel':''}" style="background:${c}" onclick="setPPColor('${c}')"></div>`
+  ).join('');
+}
+function setPPColor(c){ ppSelColor=c; buildPPColors(); }
+
+function genId(name){
+  const parts = name.trim().split(' ');
+  const raw = (parts[0]?.[0]||'') + (parts[1]?.[0]||parts[0]?.[1]||'');
+  const base = raw.toUpperCase().replace(/[^A-Z]/g,'') || 'XX';
+  let id = base;
+  let n = 2;
+  while(people.find(p=>p.id===id)) id = base + (n++);
+  return id;
+}
+
+function renderPeoplePanel(){
+  const term = (document.getElementById('pp-search-input')?.value||'').toLowerCase();
+  const filtered = people.filter(p => !term || p.name.toLowerCase().includes(term) || p.title.toLowerCase().includes(term));
+  const list = document.getElementById('pp-list');
+  // update badge
+  document.getElementById('pp-badge').textContent = people.length;
+  document.getElementById('pp-count').textContent = people.length;
+
+  if(!filtered.length){
+    list.innerHTML = `<div style="text-align:center;padding:14px;color:var(--text-dim);font-size:12.5px">${term?'Kişi bulunamadı':'Henüz kişi yok'}</div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(p => {
+    const inTeams = teams.filter(t=>t.members.find(m=>m.pid===p.id)).length;
+    const inTasks = tasks.filter(t=>(Array.isArray(t.assignees)?t.assignees:(t.assignee?[t.assignee]:[])).includes(p.id)).length;
+    const roleColors = {Lider:'var(--accent)',Yönetici:'var(--orange)',Gözlemci:'var(--text-muted)',Danışman:'var(--green)',Üye:'var(--text-dim)'};
+    const roleCol = roleColors[p.role] || 'var(--text-dim)';
+    if(editingPersonId===p.id){
+      const roleOpts = ['Üye','Lider','Yönetici','Gözlemci','Danışman'].map(r=>`<option value="${r}"${p.role===r?' selected':''}>${r}</option>`).join('');
+      return `<div class="pp-person" id="pp-row-${p.id}" style="flex-direction:column;align-items:stretch;gap:6px;border-color:var(--accent)">
+        <div class="pp-edit-row">
+          ${avt(p.id,28)}
+          <input class="pp-input" id="pp-edit-name-${p.id}" value="${p.name}" style="flex:1"/>
+        </div>
+        <input class="pp-input" id="pp-edit-title-${p.id}" value="${p.title}" placeholder="Ünvan"/>
+        <select class="pp-input" id="pp-edit-role-${p.id}" style="cursor:pointer;appearance:none;background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236b7280' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E&quot;);background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;">${roleOpts}</select>
+        <div class="pp-color-row" id="pp-edit-colors-${p.id}"></div>
+        <div style="display:flex;gap:6px">
+          <button class="pp-add-btn" style="flex:1" onclick="saveEditPerson('${p.id}')">Kaydet</button>
+          <button onclick="cancelEditPerson()" style="flex:1;padding:7px;border-radius:7px;background:var(--surface2);border:1px solid var(--border);color:var(--text-muted);font-size:12.5px;cursor:pointer;font-family:'DM Sans',sans-serif;">İptal</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="pp-person" id="pp-row-${p.id}">
+      ${avt(p.id,30)}
+      <div style="flex:1;min-width:0">
+        <div class="pp-pname" style="display:flex;align-items:center;gap:6px">${p.name}${p.role?`<span style="font-size:10px;font-weight:700;color:${roleCol};background:${roleCol}18;padding:1px 6px;border-radius:8px">${p.role}</span>`:''}</div>
+        <div class="pp-ptitle">${p.title}${inTeams?` · <span style="color:var(--accent)">${inTeams} grup</span>`:''}${inTasks?` · ${inTasks} görev`:''}</div>
+      </div>
+      <div class="pp-actions">
+        <button class="pp-btn" onclick="startEditPerson('${p.id}')" title="Düzenle">✏️</button>
+        <button class="pp-btn del" onclick="deletePerson('${p.id}')" title="Sil">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // build edit color pickers after render
+  filtered.filter(p=>p.id===editingPersonId).forEach(p=>{
+    const row = document.getElementById(`pp-edit-colors-${p.id}`);
+    if(row) row.innerHTML = COLORS.map(c=>
+      `<div class="pp-swatch${p.color===c?' sel':''}" style="background:${c};width:20px;height:20px;" onclick="setEditPersonColor('${p.id}','${c}')"></div>`
+    ).join('');
+  });
+}
+
+function addPerson(){
+  const name = document.getElementById('pp-pname').value.trim();
+  if(!name){ document.getElementById('pp-pname').style.borderColor='var(--red)'; return; }
+  document.getElementById('pp-pname').style.borderColor='';
+  const title = document.getElementById('pp-ptitle').value.trim() || 'Ekip Üyesi';
+  const role  = document.getElementById('pp-prole').value;
+  const email = document.getElementById('pp-pemail').value.trim().toLowerCase();
+  const id = genId(name);
+  people.push({id, name, title, role, email, color: ppSelColor});
+  saveAll();
+  document.getElementById('pp-pname').value='';
+  document.getElementById('pp-pemail').value='';
+  document.getElementById('pp-ptitle').value='';
+  ppSelColor = COLORS[Math.floor(Math.random()*COLORS.length)];
+  renderPeoplePanel(); buildPPColors();
+  showToast(`✅ ${name} eklendi`);
+}
+
+function startEditPerson(id){ 
+  if(!requirePerm('editAnyPerson','Kişi düzenlemek için Yönetici yetkisi gereklidir')) return;
+  editingPersonId = id; renderPeoplePanel(); 
+}
+function cancelEditPerson(){ editingPersonId = null; renderPeoplePanel(); }
+function setEditPersonColor(pid, color){
+  const p = people.find(x=>x.id===pid); if(!p) return;
+  p.color = color;
+  renderPeoplePanel();
+}
+function saveEditPerson(id){
+  const p = people.find(x=>x.id===id); if(!p) return;
+  const name = document.getElementById(`pp-edit-name-${id}`)?.value.trim();
+  const title = document.getElementById(`pp-edit-title-${id}`)?.value.trim();
+  const role  = document.getElementById(`pp-edit-role-${id}`)?.value;
+  if(name) p.name = name;
+  if(title) p.title = title;
+  if(role) p.role = role;
+  // userDB'yi de güncelle
+  const entry = Object.entries(userDB).find(([,u])=>u.name===p.name || (name && u.name===name));
+  if(entry && role){ userDB[entry[0]].role = role; saveUserDB(); }
+  // Oturumu açık kişinin rolü değiştiyse topbar'ı güncelle
+  if(currentUser && currentUser.name === p.name){ currentUser.role = p.role; updateTopbarUser(); }
+  saveAll();
+  editingPersonId = null;
+  renderPeoplePanel();
+  showToast('✅ Kişi güncellendi');
+}
+function deletePerson(id){
+  if(!requirePerm('deleteAnyPerson','Kişi silmek için Yönetici yetkisi gereklidir')) return;
+  const p = people.find(x=>x.id===id); if(!p) return;
+  const inTeam = teams.some(t=>t.members.find(m=>m.pid===id));
+  const inTask = tasks.some(t=>(Array.isArray(t.assignees)?t.assignees:(t.assignee?[t.assignee]:[])).includes(id));
+  if(inTeam||inTask){
+    if(!confirm(`${p.name} bir grup veya göreve atanmış. Yine de silmek istiyor musunuz?`)) return;
+    teams.forEach(t=>{ t.members = t.members.filter(m=>m.pid!==id); });
+  }
+  people = people.filter(x=>x.id!==id);
+  saveAll();
+  renderPeoplePanel(); renderTeamsNav();
+  showToast(`🗑️ ${p.name} silindi`);
+}
+
+// ── AUTH ─────────────────────────────────────────────
+// Demo kullanıcı veritabanı (e-posta → {name, pass, role, color})
+// ── AUTH (Firebase) ───────────────────────────────────
+let userDB = (()=>{
+  try { return JSON.parse(localStorage.getItem('wb_users')||'null') || {}; } catch(e) { return {}; }
+})();
+function saveUserDB(){ try{ localStorage.setItem('wb_users', JSON.stringify(userDB)); }catch(e){} }
+
+let currentUser = null;
+
+function switchAuthTab(tab){
+  document.getElementById('tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('auth-form-login').classList.toggle('hidden', tab!=='login');
+  document.getElementById('auth-form-register').classList.toggle('hidden', tab!=='register');
+  document.getElementById('auth-title').textContent = tab==='login' ? 'Tekrar hoş geldiniz' : 'Hesap oluştur';
+  document.getElementById('auth-sub').textContent = tab==='login' ? 'Hesabınıza giriş yapın' : 'Ücretsiz başlayın';
+  hideAuthError();
+}
+
+function showAuthError(msg){
+  const el = document.getElementById('auth-error');
+  el.textContent = '⚠️ ' + msg;
+  el.classList.add('show');
+}
+function hideAuthError(){ document.getElementById('auth-error').classList.remove('show'); }
+
+function doLogin(){
+  hideAuthError();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('login-pass').value;
+  if(!email || !pass){ showAuthError('E-posta ve şifre gereklidir.'); return; }
+  showAuthLoading(true);
+  auth.signInWithEmailAndPassword(email, pass)
+    .catch(e=>{
+      showAuthLoading(false);
+      if(e.code==='auth/user-not-found'||e.code==='auth/wrong-password'||e.code==='auth/invalid-credential')
+        showAuthError('E-posta veya şifre hatalı.');
+      else showAuthError('Giriş başarısız: ' + e.message);
+    });
+}
+
+function doRegister(){
+  hideAuthError();
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('reg-pass').value;
+  if(!name)  { showAuthError('Ad soyad gereklidir.'); return; }
+  if(!email || !email.includes('@')){ showAuthError('Geçerli bir e-posta girin.'); return; }
+  if(pass.length < 6){ showAuthError('Şifre en az 6 karakter olmalıdır.'); return; }
+  showAuthLoading(true);
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(cred => cred.user.updateProfile({displayName: name}))
+    .catch(e=>{
+      showAuthLoading(false);
+      if(e.code==='auth/email-already-in-use') showAuthError('Bu e-posta zaten kayıtlı.');
+      else showAuthError('Kayıt başarısız: ' + e.message);
+    });
+}
+
+function showAuthLoading(on){
+  const btn = document.querySelector('#auth-form-login .auth-btn, #auth-form-register .auth-btn');
+  if(btn) btn.textContent = on ? '⏳ Lütfen bekleyin...' : (document.getElementById('auth-form-login').classList.contains('hidden') ? 'Hesap Oluştur →' : 'Giriş Yap →');
+}
+
+function doLogout(){
+  auth.signOut();
+  closeUserDropdown();
+}
+
+// Firebase Auth state dinleyici — tek giriş noktası
+auth.onAuthStateChanged(async fbUser => {
+  if(fbUser){
+    const email = fbUser.email;
+    const name  = fbUser.displayName || email.split('@')[0];
+    const color = userDB[email]?.color || COLORS[Math.floor(Math.random()*COLORS.length)];
+    const role  = userDB[email]?.role  || 'Üye';
+    // userDB güncelle
+    if(!userDB[email]) { userDB[email]={name,color,role}; saveUserDB(); }
+    // Firebase'den verileri yükle
+    await loadFromFirebase();
+    // people listesinden güncel rolü al (profilde değiştirildiyse)
+    const myPerson = people.find(p=>p.email===email||p.name===(userDB[email]?.name||name));
+    const roleFromPeople = myPerson?.role;
+    const resolvedRole = roleFromPeople || userDB[email]?.role || 'Üye';
+    // userDB'yi de güncelle
+    if(userDB[email]) userDB[email].role = resolvedRole;
+    currentUser = {name: userDB[email]?.name||name, email, role: resolvedRole, color: userDB[email]?.color||color};
+    // People listesine ekle (yoksa)
+    const alreadyIn = people.find(p=>p.email===email||p.name===name);
+    if(!alreadyIn){
+      const id = genId(name);
+      people.push({id, name:currentUser.name, email, title:'Ekip Üyesi', role: resolvedRole, color:currentUser.color});
+      saveAll();
+    } else if(alreadyIn && !alreadyIn.email){
+      alreadyIn.email = email; saveAll();
+    }
+    document.getElementById('auth-screen').classList.add('hidden');
+    updateTopbarUser();
+    renderTeamsNav(); render();
+    document.getElementById('pp-badge').textContent = people.length;
+    showToast(`👋 Hoş geldiniz, ${currentUser.name.split(' ')[0]}!`);
+  } else {
+    currentUser = null;
+    document.getElementById('auth-screen').classList.remove('hidden');
+    document.getElementById('login-email').value = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('reg-name').value = '';
+    document.getElementById('reg-email').value = '';
+    document.getElementById('reg-pass').value = '';
+    hideAuthError();
+  }
+});
+
+function updateTopbarUser(){
+  if(!currentUser) return;
+  const initials = currentUser.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  // topbar avatar
+  const ta = document.getElementById('topbar-avatar');
+  ta.textContent = initials;
+  ta.style.background = currentUser.color;
+  document.getElementById('topbar-name').textContent = currentUser.name.split(' ')[0];
+  document.getElementById('topbar-role').textContent = currentUser.role;
+  // dropdown
+  const da = document.getElementById('dd-avatar');
+  da.textContent = initials;
+  da.style.background = currentUser.color;
+  document.getElementById('dd-name').textContent = currentUser.name;
+  document.getElementById('dd-email').textContent = currentUser.email;
+}
+
+function toggleUserDropdown(e){
+  const dd = document.getElementById('user-dropdown');
+  dd.classList.toggle('open');
+}
+function closeUserDropdown(){ document.getElementById('user-dropdown').classList.remove('open'); }
+document.addEventListener('click', e => {
+  if(!document.getElementById('user-widget').contains(e.target)) closeUserDropdown();
+});
+
+let selectedProfileColor = null;
+
+function openProfileModal(tab){
+  closeUserDropdown();
+  if(!currentUser){ showToast('⚠️ Giriş yapmalısınız'); return; }
+  const p = people.find(x=>x.email===currentUser.email||x.name===currentUser.name);
+  // Profil alanlarını doldur
+  document.getElementById('profile-name').value  = currentUser.name || '';
+  document.getElementById('profile-title').value = p?.title || '';
+  document.getElementById('profile-role').value  = p?.role || currentUser.role || 'Üye';
+  document.getElementById('profile-name-preview').textContent  = currentUser.name || '—';
+  document.getElementById('profile-email-preview').textContent = currentUser.email || '—';
+  selectedProfileColor = currentUser.color || '#6c63ff';
+  const av = document.getElementById('profile-avatar-preview');
+  av.style.background = selectedProfileColor;
+  av.textContent = (currentUser.name||'?')[0].toUpperCase();
+  document.querySelectorAll('#profile-colors [data-color]').forEach(el=>{
+    el.style.border = el.dataset.color===selectedProfileColor ? '2px solid var(--text)' : '2px solid transparent';
+  });
+  // Hesap alanlarını doldur
+  document.getElementById('account-email').value       = currentUser.email || '';
+  document.getElementById('account-pass-old').value    = '';
+  document.getElementById('account-pass-new').value    = '';
+  document.getElementById('account-pass-confirm').value= '';
+  switchProfileTab(tab);
+  document.getElementById('modal-profile').classList.add('open');
+}
+
+function switchProfileTab(tab){
+  const isProfile = tab==='profile';
+  document.getElementById('ptab-body-profile').classList.toggle('hidden', !isProfile);
+  document.getElementById('ptab-body-account').classList.toggle('hidden',  isProfile);
+  const btnP = document.getElementById('ptab-profile');
+  const btnA = document.getElementById('ptab-account');
+  btnP.style.background   = isProfile ? 'var(--surface)' : 'transparent';
+  btnP.style.color        = isProfile ? 'var(--text)'    : 'var(--text-dim)';
+  btnP.style.boxShadow    = isProfile ? '0 1px 4px rgba(0,0,0,.08)' : 'none';
+  btnA.style.background   = !isProfile ? 'var(--surface)' : 'transparent';
+  btnA.style.color        = !isProfile ? 'var(--text)'    : 'var(--text-dim)';
+  btnA.style.boxShadow    = !isProfile ? '0 1px 4px rgba(0,0,0,.08)' : 'none';
+}
+
+function selectProfileColor(c){
+  selectedProfileColor = c;
+  document.querySelectorAll('#profile-colors [data-color]').forEach(el=>{
+    el.style.border = el.dataset.color===c ? '2px solid var(--text)' : '2px solid transparent';
+  });
+  const av = document.getElementById('profile-avatar-preview');
+  av.style.background = c;
+}
+
+function saveProfileModal(){
+  const isAccountTab = !document.getElementById('ptab-body-account').classList.contains('hidden');
+
+  if(isAccountTab){
+    const newPass    = document.getElementById('account-pass-new').value;
+    const confPass   = document.getElementById('account-pass-confirm').value;
+    const oldPass    = document.getElementById('account-pass-old').value;
+    if(newPass || confPass){
+      if(newPass.length < 6){ showToast('⚠️ Yeni şifre en az 6 karakter olmalı'); return; }
+      if(newPass !== confPass){ showToast('⚠️ Şifreler eşleşmiyor'); return; }
+      // Firebase Auth ile şifre değiştir (yeniden kimlik doğrulama gerekir)
+      const fbUser = auth.currentUser;
+      const credential = firebase.auth.EmailAuthProvider.credential(fbUser.email, oldPass);
+      fbUser.reauthenticateWithCredential(credential)
+        .then(()=> fbUser.updatePassword(newPass))
+        .then(()=>{ showToast('✅ Şifre güncellendi'); closeModal('modal-profile'); })
+        .catch(e=>{
+          if(e.code==='auth/wrong-password') showToast('⚠️ Mevcut şifre yanlış');
+          else showToast('⚠️ Şifre değiştirilemedi: ' + e.message);
+        });
+      return;
+    }
+    showToast('ℹ️ Değiştirilecek bir şey yok');
+
+  } else {
+    const newName  = document.getElementById('profile-name').value.trim();
+    const newTitle = document.getElementById('profile-title').value.trim();
+    const newRole  = document.getElementById('profile-role').value;
+    if(!newName){ showToast('⚠️ Ad boş olamaz'); return; }
+    const p = people.find(x=>x.email===currentUser.email||x.name===currentUser.name);
+    if(p){ p.name=newName; p.title=newTitle; p.color=selectedProfileColor; p.role=newRole; }
+    if(userDB[currentUser.email]){ userDB[currentUser.email].name=newName; userDB[currentUser.email].color=selectedProfileColor; userDB[currentUser.email].role=newRole; saveUserDB(); }
+    currentUser.name  = newName;
+    currentUser.color = selectedProfileColor;
+    currentUser.role  = newRole;
+    // Firebase displayName güncelle
+    auth.currentUser?.updateProfile({displayName: newName}).catch(()=>{});
+    saveAll();
+    updateTopbarUser();
+    showToast('✅ Profil güncellendi');
+  }
+  closeModal('modal-profile');
+}
+
+function buildQuickLogins(){
+  const el = document.getElementById('quick-logins');
+  if(el) el.innerHTML = ''; // Firebase versiyonunda hızlı giriş yok
+}
+function quickLogin(email){ /* Firebase versiyonunda kullanılmıyor */ }
+
+// ── DAVET SİSTEMİ ─────────────────────────────────────
+let invites = ls('wb_invites', []); // {id, email, role, teamId, message, date, status, invitedBy, token}
+let currentInviteTab = 'email';
+let pendingAcceptToken = null;
+
+function openInviteModal(){
+  closeUserDropdown();
+  // populate team dropdown
+  const sel = document.getElementById('invite-team');
+  sel.innerHTML = '<option value="">— Seçme —</option>' + teams.map(t=>`<option value="${t.id}">${t.icon} ${t.name}</option>`).join('');
+  switchInviteTab('email');
+  document.getElementById('modal-invite').classList.add('open');
+}
+
+function switchInviteTab(tab){
+  currentInviteTab = tab;
+  ['email','link','pending'].forEach(t=>{
+    document.getElementById(`itab-${t}`).classList.toggle('active', t===tab);
+    document.getElementById(`invite-panel-${t}`).classList.toggle('hidden', t!==tab);
+  });
+  const footerBtn = document.getElementById('invite-action-btn');
+  if(tab==='email'){ footerBtn.textContent='Davet Gönder'; footerBtn.onclick=sendEmailInvite; footerBtn.classList.remove('hidden'); }
+  else if(tab==='link'){ footerBtn.textContent='Link Oluştur'; footerBtn.onclick=generateInviteLink; footerBtn.classList.remove('hidden'); }
+  else { footerBtn.classList.add('hidden'); renderPendingList(); }
+  updatePendingBadge();
+}
+
+// EmailJS yapılandırması
+const EMAILJS_SERVICE_ID  = 'service_npadd4h';
+const EMAILJS_TEMPLATE_ID = 'template_c1z79te';
+const EMAILJS_PUBLIC_KEY  = 'lXDK5B0VBHaszGLDd';
+emailjs.init(EMAILJS_PUBLIC_KEY);
+
+function sendEmailInvite(){
+  const email = document.getElementById('invite-email-input').value.trim().toLowerCase();
+  if(!email || !email.includes('@')){ showToast('⚠️ Geçerli bir e-posta girin'); return; }
+  if(invites.find(i=>i.email===email && i.status==='pending')){ showToast('⚠️ Bu e-postaya zaten bekleyen davet var'); return; }
+  const role    = document.getElementById('invite-role').value;
+  const teamId  = document.getElementById('invite-team').value;
+  const message = document.getElementById('invite-message').value.trim();
+  const token   = Math.random().toString(36).slice(2,10).toUpperCase();
+  const inviteLink = `${location.origin}${location.pathname}?invite=${token}`;
+  invites.push({
+    id: Date.now(), email, role,
+    teamId: teamId ? parseInt(teamId) : null,
+    message, date: new Date().toLocaleDateString('tr-TR'),
+    status:'pending', invitedBy: currentUser?.name || 'Sistem', token
+  });
+  saveAll();
+  document.getElementById('invite-email-input').value='';
+  document.getElementById('invite-message').value='';
+  updatePendingBadge();
+  closeModal('modal-invite');
+  showToast('⏳ Davet e-postası gönderiliyor...');
+  emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    to_email:   email,
+    invited_by: currentUser?.name || 'WorkBoard',
+    message:    message || 'WorkBoard ekibine katılmaya davet edildiniz.',
+    invite_link: inviteLink
+  }).then(()=>{
+    showToast(`✅ Davet e-postası gönderildi → ${email}`);
+  }).catch(err=>{
+    console.error('EmailJS error:', err);
+    showToast(`⚠️ E-posta gönderilemedi: ${err.text || err}`);
+  });
+}
+
+function generateInviteLink(){
+  const role   = document.getElementById('link-role').value;
+  const expiry = document.getElementById('link-expiry').value;
+  const token  = Math.random().toString(36).slice(2,12).toUpperCase();
+  const link   = `https://workboard.app/invite/${token}`;
+  invites.push({
+    id: Date.now(), email:'(link)', role,
+    teamId: null, message:'',
+    date: new Date().toLocaleDateString('tr-TR'),
+    status:'pending', invitedBy: currentUser?.name || 'Sistem', token,
+    expiryHours: parseInt(expiry)||0, isLink:true
+  });
+  document.getElementById('generated-link').textContent = link;
+  document.getElementById('link-box-wrap').classList.remove('hidden');
+  document.getElementById('invite-action-btn').textContent = 'Yeni Link';
+  updatePendingBadge();
+}
+
+function copyInviteLink(){
+  const link = document.getElementById('generated-link').textContent;
+  navigator.clipboard?.writeText(link).catch(()=>{});
+  const btn = document.getElementById('copy-btn');
+  btn.textContent = '✓ Kopyalandı'; btn.classList.add('copied');
+  setTimeout(()=>{ btn.textContent='Kopyala'; btn.classList.remove('copied'); }, 2000);
+}
+
+function renderPendingList(){
+  const list = document.getElementById('pending-list');
+  if(!invites.length){
+    list.innerHTML='<div class="empty-invites">📭 Henüz gönderilmiş davet yok</div>';
+    return;
+  }
+  list.innerHTML = [...invites].reverse().map(inv=>`
+    <div class="pending-row">
+      <div style="min-width:0;flex:1">
+        <div class="pending-email">${inv.isLink ? '🔗 Link daveti' : inv.email}</div>
+        <div style="display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:600;color:var(--accent);background:rgba(108,99,255,.1);padding:1px 7px;border-radius:8px">${inv.role}</span>
+          ${inv.teamId ? `<span style="font-size:11px;color:var(--text-dim)">${teams.find(t=>t.id===inv.teamId)?.name||''}</span>`:''}
+          <span class="pending-meta">${inv.date} · ${inv.invitedBy}</span>
+        </div>
+      </div>
+      <span class="pending-status ${inv.status==='accepted'?'status-accepted':'status-pending'}">${inv.status==='accepted'?'✓ Kabul':'⏳ Bekliyor'}</span>
+      ${inv.status==='pending'?`<button class="revoke-btn" onclick="revokeInvite(${inv.id})" title="İptal et">✕</button>`:'<span style="width:22px"></span>'}
+    </div>`).join('');
+}
+
+function revokeInvite(id){
+  invites = invites.filter(i=>i.id!==id);
+  saveAll();
+  renderPendingList(); updatePendingBadge();
+  showToast('🗑️ Davet iptal edildi');
+}
+
+function updatePendingBadge(){
+  const pending = invites.filter(i=>i.status==='pending').length;
+  const badge = document.getElementById('invite-badge');
+  const countBadge = document.getElementById('pending-count-badge');
+  badge.classList.toggle('hidden', pending===0);
+  badge.textContent = pending;
+  countBadge.textContent = pending > 0 ? ` (${pending})` : '';
+}
+
+// Simülasyon: davet edilen kişinin "kaydolma" ekranını göster
+function showInviteAcceptSim(token, email, role){
+  const inv = invites.find(i=>i.token===token); if(!inv) return;
+  pendingAcceptToken = token;
+  document.getElementById('accept-title').textContent = `WorkBoard'a katıl`;
+  document.getElementById('accept-sub').textContent = `${inv.invitedBy} sizi ${role} olarak davet etti`;
+  document.getElementById('accept-email').value = email;
+  document.getElementById('modal-accept-invite').classList.add('open');
+}
+
+function acceptInvite(){
+  const name = document.getElementById('accept-name').value.trim();
+  const email= document.getElementById('accept-email').value.trim().toLowerCase();
+  const pass = document.getElementById('accept-pass').value;
+  if(!name){ showToast('⚠️ Ad soyad gerekli'); return; }
+  if(pass.length < 6){ showToast('⚠️ Şifre en az 6 karakter olmalı'); return; }
+  const inv = invites.find(i=>i.token===pendingAcceptToken);
+  if(!inv){ closeModal('modal-accept-invite'); return; }
+  const color = COLORS[Object.keys(userDB).length % COLORS.length];
+  userDB[email] = {name, pass, role: inv.role, color};
+  const id = genId(name);
+  people.push({id, name, title: inv.role, role: inv.role, color});
+  if(inv.teamId){ const t=teams.find(x=>x.id===inv.teamId); if(t && !t.members.find(m=>m.pid===id)) t.members.push({pid:id,role:inv.role}); }
+  inv.status = 'accepted';
+  saveAll();
+  pendingAcceptToken = null;
+  closeModal('modal-accept-invite');
+  renderTeamsNav(); renderPeoplePanel();
+  buildQuickLogins();
+  document.getElementById('pp-badge').textContent = people.length;
+  updatePendingBadge();
+  showToast(`🎉 ${name} sisteme katıldı!`);
+}
+
+// ── INIT ─────────────────────────────────────────────
+
+// Eski index tabanlı grp değerlerini migrate et
+(function migrateTasks(){
+  tasks.forEach(t => {
+    const match = teams.find(tm => tm.id === t.grp);
+    if(!match && teams[t.grp]) { t.grp = teams[t.grp].id; }
+  });
+})();
+
+buildQuickLogins();
+renderTeamsNav();
+render();
+document.getElementById('pp-badge').textContent = people.length;
+// Not: Oturum yönetimi auth.onAuthStateChanged tarafından yapılıyor
+</script>
+</body>
+</html>

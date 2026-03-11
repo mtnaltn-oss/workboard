@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ÇinChat 🐉</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f0f1a;
+  --surface:#1a1a2e;
+  --surface2:#16213e;
+  --card:#1e1e3a;
+  --border:#2a2a4a;
+  --accent:#e94560;
+  --accent2:#f5a623;
+  --text:#f0f0f5;
+  --text-muted:#8888aa;
+  --green:#22d3a5;
+  --bubble-me:#e94560;
+  --bubble-them:#1e1e3a;
+  --radius:18px;
+}
+body.light{
+  --bg:#f0f4f8;
+  --surface:#ffffff;
+  --surface2:#e8edf3;
+  --card:#ffffff;
+  --border:#dde3ec;
+  --text:#1a1d2e;
+  --text-muted:#6b7280;
+  --bubble-me:#e94560;
+  --bubble-them:#ffffff;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',sans-serif;color:var(--text);transition:background .3s,color .3s}
+
+/* ── GİRİŞ EKRANI ── */
+#join-screen{
+  position:fixed;inset:0;z-index:100;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:24px;
+}
+.join-logo{font-size:56px;margin-bottom:8px;animation:float 3s ease-in-out infinite}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.join-title{font-size:28px;font-weight:800;color:var(--text);margin-bottom:4px}
+.join-sub{font-size:14px;color:var(--text-muted);margin-bottom:32px;text-align:center}
+.join-card{
+  width:100%;max-width:360px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:24px;
+}
+.join-label{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:.05em;margin-bottom:6px}
+.join-input{
+  width:100%;padding:12px 16px;
+  background:var(--surface);border:1.5px solid var(--border);
+  border-radius:12px;color:var(--text);font-family:'Nunito',sans-serif;font-size:15px;
+  outline:none;transition:border .2s;margin-bottom:16px;
+}
+.join-input:focus{border-color:var(--accent)}
+.join-input::placeholder{color:var(--text-muted)}
+.join-btn{
+  width:100%;padding:14px;
+  background:linear-gradient(135deg,var(--accent),#c73652);
+  border:none;border-radius:12px;color:#fff;font-family:'Nunito',sans-serif;
+  font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s;
+}
+.join-btn:active{opacity:.85}
+.join-info{font-size:12px;color:var(--text-muted);text-align:center;margin-top:12px}
+.join-error{font-size:13px;color:var(--accent);text-align:center;margin-top:8px;display:none}
+
+/* ── ANA EKRAN ── */
+#app{display:flex;flex-direction:column;height:100%;display:none}
+
+/* Topbar */
+.topbar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 16px;padding-top:max(10px,env(safe-area-inset-top));
+  background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.topbar-logo{font-size:22px}
+.topbar-info{flex:1;min-width:0}
+.topbar-title{font-size:15px;font-weight:800;color:var(--text)}
+.topbar-sub{font-size:11px;color:var(--text-muted)}
+.online-dots{display:flex;gap:4px;align-items:center}
+.online-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.topbar-members{
+  width:36px;height:36px;border-radius:10px;background:var(--card);
+  border:1px solid var(--border);display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;position:relative;
+}
+.members-badge{
+  position:absolute;top:-4px;right:-4px;
+  background:var(--accent);color:#fff;font-size:9px;font-weight:700;
+  border-radius:50%;width:16px;height:16px;display:flex;align-items:center;justify-content:center;
+}
+
+/* Mesajlar */
+#messages-wrap{
+  flex:1;overflow-y:auto;
+  padding:16px;padding-bottom:8px;
+  display:flex;flex-direction:column;gap:4px;
+  scroll-behavior:smooth;
+}
+#messages-wrap::-webkit-scrollbar{width:0}
+
+.msg-date-divider{
+  text-align:center;margin:8px 0;
+  font-size:11px;color:var(--text-muted);font-weight:600;
+  display:flex;align-items:center;gap:8px;
+}
+.msg-date-divider::before,.msg-date-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.msg-row{display:flex;flex-direction:column;margin-bottom:2px}
+.msg-row.me{align-items:flex-end}
+.msg-row.them{align-items:flex-start}
+
+.msg-sender{font-size:11px;font-weight:700;margin-bottom:3px;padding:0 4px}
+.msg-row.me .msg-sender{color:var(--accent)}
+.msg-row.them .msg-sender{color:var(--accent2)}
+
+.msg-bubble{
+  max-width:78%;padding:10px 14px;
+  border-radius:var(--radius);
+  font-size:14px;line-height:1.5;word-break:break-word;
+  position:relative;
+}
+.msg-row.me .msg-bubble{
+  background:var(--bubble-me);color:#fff;
+  border-bottom-right-radius:4px;
+}
+.msg-row.them .msg-bubble{
+  background:var(--bubble-them);color:var(--text);
+  border:1px solid var(--border);border-bottom-left-radius:4px;
+}
+.msg-time{font-size:10px;opacity:.65;margin-top:4px;display:block;text-align:right}
+.del-btn{cursor:pointer;font-size:12px;opacity:.7;padding:2px 4px;border-radius:4px;display:inline-block}
+
+/* Fotoğraf mesajı */
+.msg-photo{
+  max-width:220px;border-radius:12px;display:block;cursor:pointer;
+  border:2px solid rgba(255,255,255,.1);
+}
+.msg-row.me .msg-photo-bubble{background:var(--bubble-me);padding:6px;border-bottom-right-radius:4px}
+.msg-row.them .msg-photo-bubble{background:var(--bubble-them);padding:6px;border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg-photo-bubble{border-radius:var(--radius);max-width:78%}
+
+/* Sistem mesajı */
+.msg-system{
+  text-align:center;font-size:12px;color:var(--text-muted);
+  padding:4px 12px;background:var(--surface);border-radius:20px;
+  align-self:center;margin:4px 0;
+}
+
+/* Input alanı */
+.input-area{
+  padding:10px 12px;padding-bottom:max(10px,env(safe-area-inset-bottom));
+  background:var(--surface);border-top:1px solid var(--border);
+  display:flex;align-items:flex-end;gap:8px;flex-shrink:0;
+}
+.input-wrap{
+  flex:1;display:flex;align-items:flex-end;
+  background:var(--card);border:1.5px solid var(--border);
+  border-radius:22px;overflow:hidden;
+  transition:border .2s;
+}
+.input-wrap:focus-within{border-color:var(--accent)}
+#msg-input{
+  flex:1;padding:10px 14px;background:transparent;
+  border:none;outline:none;color:var(--text);font-family:'Nunito',sans-serif;
+  font-size:14px;resize:none;max-height:100px;line-height:1.4;
+}
+#msg-input::placeholder{color:var(--text-muted)}
+.photo-btn{
+  width:38px;height:38px;flex-shrink:0;
+  background:transparent;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;color:var(--text-muted);transition:color .2s;
+  padding:0 8px 0 0;
+}
+.photo-btn:active{color:var(--accent2)}
+.send-btn{
+  width:44px;height:44px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--accent),#c73652);
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  font-size:18px;transition:transform .15s,opacity .2s;
+}
+.send-btn:active{transform:scale(.9)}
+.send-btn:disabled{opacity:.4}
+
+/* Üyeler paneli */
+#members-panel{
+  position:fixed;inset:0;z-index:50;background:rgba(0,0,0,.6);
+  display:none;align-items:flex-end;
+}
+#members-panel.open{display:flex}
+.members-sheet{
+  width:100%;background:var(--surface);
+  border-radius:20px 20px 0 0;padding:20px;
+  max-height:70vh;overflow-y:auto;
+  animation:slideUp .25s ease;
+}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.members-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 16px}
+.members-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:16px}
+.member-item{
+  display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.member-item:last-child{border-bottom:none}
+.member-avatar{
+  width:40px;height:40px;border-radius:12px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;color:#fff;flex-shrink:0;
+}
+.member-name{font-size:14px;font-weight:700;color:var(--text)}
+.member-status{font-size:11px;color:var(--text-muted)}
+.online-tag{color:var(--green);font-weight:600}
+
+/* Fotoğraf lightbox */
+#lightbox{
+  position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.92);
+  display:none;align-items:center;justify-content:center;
+}
+#lightbox.open{display:flex}
+#lightbox img{max-width:95%;max-height:90vh;border-radius:12px;object-fit:contain}
+
+/* Yükleme göstergesi */
+.upload-progress{
+  text-align:center;padding:8px;font-size:12px;color:var(--text-muted);
+  display:none;
+}
+
+/* Bağlantı durumu */
+#conn-banner{
+  background:#e94560;color:#fff;font-size:12px;font-weight:700;
+  text-align:center;padding:6px;display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- GİRİŞ EKRANI -->
+<div id="join-screen">
+  <div class="join-logo">🐉</div>
+  <div class="join-title">ÇinChat</div>
+  <div class="join-sub">Çin'deyken de bağlı kalın 🇨🇳</div>
+  <div class="join-card">
+    <div class="join-label">ADINIZ</div>
+    <input class="join-input" id="join-name" placeholder="Adınız Soyadınız" maxlength="20"/>
+    <div class="join-label">RENK SEÇİN</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px" id="color-picker">
+      <div class="color-opt" data-c="#e94560" style="width:32px;height:32px;border-radius:50%;background:#e94560;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#f5a623" style="width:32px;height:32px;border-radius:50%;background:#f5a623;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#22d3a5" style="width:32px;height:32px;border-radius:50%;background:#22d3a5;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#6c63ff" style="width:32px;height:32px;border-radius:50%;background:#6c63ff;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#3b82f6" style="width:32px;height:32px;border-radius:50%;background:#3b82f6;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#ec4899" style="width:32px;height:32px;border-radius:50%;background:#ec4899;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#f97316" style="width:32px;height:32px;border-radius:50%;background:#f97316;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+      <div class="color-opt" data-c="#a855f7" style="width:32px;height:32px;border-radius:50%;background:#a855f7;cursor:pointer;border:3px solid transparent;transition:all .15s"></div>
+    </div>
+    <button class="join-btn" onclick="joinChat()">Sohbete Katıl 🚀</button>
+    <div class="join-error" id="join-error"></div>
+    <div class="join-info">Sadece davet linkiniz varsa girebilirsiniz</div>
+  </div>
+</div>
+
+<!-- ANA EKRAN -->
+<div id="app">
+  <div id="conn-banner">📡 Bağlantı kesildi, yeniden bağlanılıyor...</div>
+  
+  <div class="topbar">
+    <div class="topbar-logo">🐉</div>
+    <div class="topbar-info">
+      <div class="topbar-title">ÇinChat</div>
+      <div class="topbar-sub" id="online-info">bağlanıyor...</div>
+    </div>
+    <div class="topbar-members" onclick="toggleTheme()" id="theme-btn" title="Tema değiştir">
+      🌙
+    </div>
+    <div class="topbar-members" onclick="openMembers()">
+      👥
+      <div class="members-badge" id="members-count">0</div>
+    </div>
+  </div>
+
+  <div id="messages-wrap">
+    <div style="text-align:center;padding:20px 0">
+      <div style="font-size:40px;margin-bottom:8px">🐉</div>
+      <div style="font-size:14px;font-weight:700;color:var(--text)">ÇinChat'e Hoş Geldiniz!</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:4px">Burası güvenli alanınız 🔒</div>
+    </div>
+  </div>
+
+  <div class="upload-progress" id="upload-progress">📸 Fotoğraf yükleniyor...</div>
+
+  <div class="input-area">
+    <div class="input-wrap">
+      <textarea id="msg-input" placeholder="Mesaj yaz..." rows="1"
+        oninput="autoResize(this)"
+        onkeydown="handleKey(event)"></textarea>
+      <button class="photo-btn" onclick="document.getElementById('photo-input').click()" title="Fotoğraf">📷</button>
+    </div>
+    <button class="send-btn" onclick="sendMessage()" id="send-btn">➤</button>
+    <input type="file" id="photo-input" accept="image/*" style="display:none" onchange="sendPhoto(this)"/>
+  </div>
+</div>
+
+<!-- ÜYELER PANELİ -->
+<div id="members-panel" onclick="e=>{ if(e.target===this) closeMembers() }">
+  <div class="members-sheet">
+    <div class="members-handle"></div>
+    <div class="members-title">👥 Üyeler</div>
+    <div id="members-list"></div>
+  </div>
+</div>
+
+<!-- LİGHTBOX -->
+<div id="lightbox" onclick="document.getElementById('lightbox').classList.remove('open')">
+  <img id="lightbox-img" src="" alt="">
+</div>
+
+<script>
+// ── FIREBASE ─────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyD6t4XJZERwXUbRlvEYYbo2z8s257OP9Zw",
+  authDomain: "edtech-5e09f.firebaseapp.com",
+  projectId: "edtech-5e09f",
+  storageBucket: "edtech-5e09f.firebasestorage.app",
+  messagingSenderId: "307734369472",
+  appId: "1:307734369472:web:7ed8e19511bc5ee92a0925",
+  databaseURL: "https://edtech-5e09f-default-rtdb.europe-west1.firebasedatabase.app"
+};
+firebase.initializeApp(firebaseConfig);
+const db      = firebase.database();
+
+// ── TEMA ─────────────────────────────────────────────
+function toggleTheme(){
+  const isLight = document.body.classList.toggle('light');
+  localStorage.setItem('cin_theme', isLight ? 'light' : 'dark');
+  document.getElementById('theme-btn').textContent = isLight ? '☀️' : '🌙';
+}
+// Kayıtlı temayı yükle
+if(localStorage.getItem('cin_theme') === 'light'){
+  document.body.classList.add('light');
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const btn = document.getElementById('theme-btn');
+    if(btn) btn.textContent = '☀️';
+  });
+}
+
+// ── DAVET KONTROLÜ ───────────────────────────────────
+const INVITE_TOKEN = 'cin2025'; // Bu token URL'de olmalı: ?invite=cin2025
+function checkInvite(){
+  const params = new URLSearchParams(location.search);
+  const token = params.get('invite');
+  if(token === INVITE_TOKEN){
+    localStorage.setItem('cin_invited', '1');
+  }
+  if(!localStorage.getItem('cin_invited')){
+    document.getElementById('join-screen').innerHTML = `
+      <div style="text-align:center;padding:40px 24px">
+        <div style="font-size:56px;margin-bottom:16px">🚫</div>
+        <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:8px">Erişim Yok</div>
+        <div style="font-size:14px;color:var(--text-muted)">Bu sayfaya erişmek için geçerli bir davet linkine ihtiyacınız var.</div>
+      </div>`;
+    return false;
+  }
+  return true;
+}
+
+// ── KULLANICI ────────────────────────────────────────
+let me = JSON.parse(localStorage.getItem('cin_user') || 'null');
+let selectedColor = '#e94560';
+const MAX_MEMBERS = 10;
+
+// Renk seçici
+document.querySelectorAll('.color-opt').forEach(el => {
+  el.addEventListener('click', () => {
+    selectedColor = el.dataset.c;
+    document.querySelectorAll('.color-opt').forEach(x => x.style.border = '3px solid transparent');
+    el.style.border = `3px solid #fff`;
+  });
+});
+// Varsayılan renk seç
+document.querySelector('.color-opt').style.border = '3px solid #fff';
+
+// Kayıtlı kullanıcı varsa adı doldur
+if(me){ document.getElementById('join-name').value = me.name; }
+
+function joinChat(){
+  if(!checkInvite()) return;
+  const name = document.getElementById('join-name').value.trim();
+  if(!name){ showJoinError('Lütfen adınızı girin'); return; }
+  if(name.length < 2){ showJoinError('Ad en az 2 karakter olmalı'); return; }
+  
+  // Max üye kontrolü
+  db.ref('cin_members').once('value', snap => {
+    const members = snap.val() || {};
+    const active = Object.values(members).filter(m => m.online);
+    if(active.length >= MAX_MEMBERS && !Object.values(members).find(m=>m.name===name)){
+      showJoinError(`Maksimum ${MAX_MEMBERS} kişi katılabilir`); return;
+    }
+    me = { id: me?.id || Date.now().toString(36) + Math.random().toString(36).slice(2), name, color: selectedColor };
+    localStorage.setItem('cin_user', JSON.stringify(me));
+    initApp(true); // yeni giriş
+  });
+}
+
+function showJoinError(msg){
+  const el = document.getElementById('join-error');
+  el.textContent = msg; el.style.display = 'block';
+  setTimeout(()=>el.style.display='none', 3000);
+}
+
+// ── UYGULAMA BAŞLAT ──────────────────────────────────
+let lastDate = '';
+let messagesRef, membersRef, myMemberRef;
+
+function initApp(isNew=false){
+  document.getElementById('join-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+
+  messagesRef = db.ref('cin_messages');
+  membersRef  = db.ref('cin_members');
+  myMemberRef = db.ref('cin_members/' + me.id);
+
+  // Üye olarak ekle
+  myMemberRef.set({ name: me.name, color: me.color, online: true, joined: Date.now() });
+  myMemberRef.onDisconnect().update({ online: false, left: Date.now() });
+
+  // Bağlantı durumu
+  db.ref('.info/connected').on('value', snap => {
+    const banner = document.getElementById('conn-banner');
+    banner.style.display = snap.val() ? 'none' : 'block';
+    if(snap.val()) myMemberRef.update({ online: true });
+  });
+
+  // Üyeleri dinle
+  membersRef.on('value', snap => {
+    const members = snap.val() || {};
+    const online = Object.values(members).filter(m=>m.online);
+    document.getElementById('members-count').textContent = online.length;
+    document.getElementById('online-info').textContent = `${online.length} kişi online`;
+    renderMembers(members);
+  });
+
+  // Mesajları dinle
+  const cutoff = Date.now() - 7 * 24 * 60 * 60 * 1000; // son 7 gün
+  messagesRef.orderByChild('ts').startAt(cutoff).on('child_added', snap => {
+    const msg = snap.val();
+    appendMessage(msg, snap.key);
+    scrollToBottom();
+    // Yeni mesaj gelince ses çal (ilk yükleme hariç, başkasından gelen mesajlarda)
+    if(!isFirstLoad && msg.uid !== me?.id && msg.type !== 'system'){
+      playNotif();
+    }
+  });
+  // İlk yükleme bitti
+  messagesRef.orderByChild('ts').startAt(cutoff).once('value', ()=>{ isFirstLoad = false; });
+
+  // Silinen mesajları DOM'dan kaldır
+  messagesRef.on('child_removed', snap => {
+    const el = document.querySelector(`[data-msgkey="${snap.key}"]`);
+    if(el) el.closest('.msg-row')?.remove();
+  });
+
+  // Giriş mesajı gönder (sadece ilk girişte)
+  if(isNew) sendSystemMsg(`${me.name} sohbete katıldı 👋`);
+}
+
+// ── MESAJ GÖNDER ─────────────────────────────────────
+function sendMessage(){
+  const input = document.getElementById('msg-input');
+  const text = input.value.trim();
+  if(!text) return;
+  messagesRef.push({
+    type: 'text', text,
+    uid: me.id, name: me.name, color: me.color,
+    ts: Date.now()
+  });
+  input.value = '';
+  input.style.height = 'auto';
+}
+
+function sendSystemMsg(text){
+  messagesRef.push({ type: 'system', text, ts: Date.now() });
+}
+
+function handleKey(e){
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendMessage(); }
+}
+
+function autoResize(el){
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+// ── FOTOĞRAF GÖNDER ──────────────────────────────────
+function sendPhoto(input){
+  const file = input.files[0];
+  if(!file) return;
+  if(file.size > 2 * 1024 * 1024){ alert('Fotoğraf 2MB\'dan küçük olmalı'); input.value=''; return; }
+
+  const progress = document.getElementById('upload-progress');
+  progress.style.display = 'block';
+
+  // Fotoğrafı sıkıştır ve base64'e çevir
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const MAX = 800;
+      let w = img.width, h = img.height;
+      if(w > MAX || h > MAX){
+        if(w > h){ h = Math.round(h * MAX/w); w = MAX; }
+        else { w = Math.round(w * MAX/h); h = MAX; }
+      }
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const base64 = canvas.toDataURL('image/jpeg', 0.7);
+      messagesRef.push({
+        type: 'photo', url: base64,
+        uid: me.id, name: me.name, color: me.color,
+        ts: Date.now()
+      }).then(()=>{
+        progress.style.display = 'none';
+        input.value = '';
+      }).catch(err=>{
+        progress.style.display = 'none';
+        alert('Fotoğraf gönderilemedi: ' + err.message);
+      });
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── BİLDİRİM SESİ ────────────────────────────────────
+let audioCtx = null;
+let isFirstLoad = true;
+
+function initAudio(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playNotif(){
+  try {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
+    osc.frequency.setValueAtTime(1100, audioCtx.currentTime + 0.1);
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + 0.3);
+  } catch(e){}
+}
+
+document.addEventListener('touchstart', initAudio, {once:true});
+document.addEventListener('click', initAudio, {once:true});
+
+// ── ÇİFT DOKUNMA İLE SİL ─────────────────────────────
+function addSwipeDelete(el, key){
+  let lastTap = 0;
+  el.addEventListener('touchend', e=>{
+    const now = Date.now();
+    if(now - lastTap < 300){
+      e.preventDefault();
+      if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
+    }
+    lastTap = now;
+  });
+  // Masaüstü için çift tıklama
+  el.addEventListener('dblclick', ()=>{
+    if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
+  });
+  // İpucu
+  el.title = 'Silmek için çift tıkla';
+}
+
+// ── MESAJ RENDER ─────────────────────────────────────
+
+function deleteMsg(key){
+  if(!confirm('Bu mesajı silmek istiyor musunuz?')) return;
+  db.ref('cin_messages/' + key).remove();
+}
+
+// ── MESAJ RENDER ─────────────────────────────────────
+function appendMessage(msg, key){
+  const wrap = document.getElementById('messages-wrap');
+  
+  if(msg.type === 'system'){
+    const el = document.createElement('div');
+    el.className = 'msg-system'; el.textContent = msg.text;
+    wrap.appendChild(el); return;
+  }
+
+  // Tarih ayırıcı
+  const msgDate = new Date(msg.ts).toLocaleDateString('tr-TR',{day:'numeric',month:'long'});
+  if(msgDate !== lastDate){
+    lastDate = msgDate;
+    const div = document.createElement('div');
+    div.className = 'msg-date-divider'; div.textContent = msgDate;
+    wrap.appendChild(div);
+  }
+
+  const isMe = msg.uid === me.id;
+  const row = document.createElement('div');
+  row.className = 'msg-row ' + (isMe ? 'me' : 'them');
+
+  if(!isMe){
+    const sender = document.createElement('div');
+    sender.className = 'msg-sender';
+    sender.style.color = msg.color || 'var(--accent2)';
+    sender.textContent = msg.name;
+    row.appendChild(sender);
+  }
+
+  const time = new Date(msg.ts).toLocaleTimeString('tr-TR',{hour:'2-digit',minute:'2-digit'});
+
+  // Uzun basma ile sil
+  let pressTimer;
+  function startPress(el){
+    if(!isMe) return;
+    pressTimer = setTimeout(()=>{
+      el.style.opacity = '.6';
+      if(confirm('Bu mesajı silmek istiyor musunuz?')){
+        db.ref('cin_messages/' + key).remove();
+      }
+      el.style.opacity = '1';
+    }, 600);
+  }
+  function cancelPress(){ clearTimeout(pressTimer); }
+
+  if(msg.type === 'photo'){
+    const bubble = document.createElement('div');
+    bubble.setAttribute('data-msgkey', key);
+    bubble.style.cssText = isMe
+      ? 'background:var(--bubble-me);padding:6px;border-radius:18px 18px 4px 18px;max-width:78%'
+      : 'background:var(--bubble-them);padding:6px;border:1px solid var(--border);border-radius:18px 18px 18px 4px;max-width:78%';
+    bubble.innerHTML = `<img src="${msg.url}" class="msg-photo" loading="lazy"/>
+      <span class="msg-time">${time}</span>`;
+    bubble.querySelector('.msg-photo').addEventListener('click', ()=>openLightbox(msg.url));
+    if(isMe) addSwipeDelete(bubble, key);
+    row.appendChild(bubble);
+  } else {
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.setAttribute('data-msgkey', key);
+    bubble.innerHTML = `${escHtml(msg.text)}<span class="msg-time">${time}</span>`;
+    if(isMe) addSwipeDelete(bubble, key);
+    row.appendChild(bubble);
+  }
+
+  wrap.appendChild(row);
+}
+
+function escHtml(str){
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+            .replace(/\n/g,'<br>');
+}
+
+function scrollToBottom(){
+  const wrap = document.getElementById('messages-wrap');
+  setTimeout(()=>wrap.scrollTop = wrap.scrollHeight, 50);
+}
+
+// ── ÜYELER ───────────────────────────────────────────
+function renderMembers(members){
+  const list = document.getElementById('members-list');
+  const sorted = Object.values(members).sort((a,b)=>b.online-a.online);
+  list.innerHTML = sorted.map(m => `
+    <div class="member-item">
+      <div class="member-avatar" style="background:${m.color||'#6c63ff'}">
+        ${m.name.slice(0,2).toUpperCase()}
+      </div>
+      <div>
+        <div class="member-name">${m.name}</div>
+        <div class="member-status ${m.online?'online-tag':''}">
+          ${m.online ? '● Online' : '○ Çevrimdışı'}
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function openMembers(){
+  document.getElementById('members-panel').classList.add('open');
+}
+function closeMembers(){
+  document.getElementById('members-panel').classList.remove('open');
+}
+document.getElementById('members-panel').addEventListener('click', e=>{
+  if(e.target === document.getElementById('members-panel')) closeMembers();
+});
+
+// ── LİGHTBOX ─────────────────────────────────────────
+function openLightbox(url){
+  document.getElementById('lightbox-img').src = url;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+// ── BAŞLAT ───────────────────────────────────────────
+if(checkInvite()){
+  if(me){ initApp(); }
+}
+</script>
+</body>
+</html>
