@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>ÇinChat 🐉</title>
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <!-- Firebase -->
@@ -573,23 +573,21 @@ function playNotif(){
 document.addEventListener('touchstart', initAudio, {once:true});
 document.addEventListener('click', initAudio, {once:true});
 
-// ── ÇİFT DOKUNMA İLE SİL ─────────────────────────────
+// ── BASILI TUT İLE SİL ───────────────────────────────
 function addSwipeDelete(el, key){
-  let lastTap = 0;
-  el.addEventListener('touchend', e=>{
-    const now = Date.now();
-    if(now - lastTap < 300){
-      e.preventDefault();
+  let timer;
+  el.addEventListener('touchstart', e=>{
+    timer = setTimeout(()=>{
+      navigator.vibrate && navigator.vibrate(50);
       if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
-    }
-    lastTap = now;
-  });
+    }, 700);
+  }, {passive:true});
+  el.addEventListener('touchend', ()=> clearTimeout(timer));
+  el.addEventListener('touchmove', ()=> clearTimeout(timer));
   // Masaüstü için çift tıklama
   el.addEventListener('dblclick', ()=>{
     if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
   });
-  // İpucu
-  el.title = 'Silmek için çift tıkla';
 }
 
 // ── MESAJ RENDER ─────────────────────────────────────
