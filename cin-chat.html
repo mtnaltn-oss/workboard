@@ -573,17 +573,8 @@ function playNotif(){
 document.addEventListener('touchstart', initAudio, {once:true});
 document.addEventListener('click', initAudio, {once:true});
 
-// ── BASILI TUT İLE SİL ───────────────────────────────
+// ── SİL FONKSİYONU ───────────────────────────────────
 function addSwipeDelete(el, key){
-  let timer;
-  el.addEventListener('touchstart', e=>{
-    timer = setTimeout(()=>{
-      navigator.vibrate && navigator.vibrate(50);
-      if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
-    }, 700);
-  }, {passive:true});
-  el.addEventListener('touchend', ()=> clearTimeout(timer));
-  el.addEventListener('touchmove', ()=> clearTimeout(timer));
   // Masaüstü için çift tıklama
   el.addEventListener('dblclick', ()=>{
     if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove();
@@ -655,6 +646,13 @@ function appendMessage(msg, key){
     bubble.querySelector('.msg-photo').addEventListener('click', ()=>openLightbox(msg.url));
     if(isMe) addSwipeDelete(bubble, key);
     row.appendChild(bubble);
+    if(isMe){
+      const delLink = document.createElement('div');
+      delLink.textContent = '🗑 sil';
+      delLink.style.cssText = 'font-size:11px;color:var(--text-muted);cursor:pointer;padding:2px 4px;text-align:right;margin-top:2px';
+      delLink.addEventListener('click', ()=>{ if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove(); });
+      row.appendChild(delLink);
+    }
   } else {
     const bubble = document.createElement('div');
     bubble.className = 'msg-bubble';
@@ -662,6 +660,13 @@ function appendMessage(msg, key){
     bubble.innerHTML = `${escHtml(msg.text)}<span class="msg-time">${time}</span>`;
     if(isMe) addSwipeDelete(bubble, key);
     row.appendChild(bubble);
+    if(isMe){
+      const delLink = document.createElement('div');
+      delLink.textContent = '🗑 sil';
+      delLink.style.cssText = 'font-size:11px;color:var(--text-muted);cursor:pointer;padding:2px 4px;text-align:right;margin-top:2px';
+      delLink.addEventListener('click', ()=>{ if(confirm('Mesajı sil?')) db.ref('cin_messages/'+key).remove(); });
+      row.appendChild(delLink);
+    }
   }
 
   wrap.appendChild(row);
