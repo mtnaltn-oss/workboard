@@ -436,7 +436,7 @@ function initApp(isNew=false){
 
   // Üye olarak ekle
   myMemberRef.set({ name: me.name, color: me.color, online: true, joined: Date.now() });
-  myMemberRef.onDisconnect().update({ online: false, left: Date.now() });
+  myMemberRef.onDisconnect().remove(); // çıkınca kaydı tamamen sil
 
   // Bağlantı durumu
   db.ref('.info/connected').on('value', snap => {
@@ -445,13 +445,13 @@ function initApp(isNew=false){
     if(snap.val()) myMemberRef.update({ online: true });
   });
 
-  // Üyeleri dinle
+  // Üyeleri dinle — sadece online olanları göster
   membersRef.on('value', snap => {
     const members = snap.val() || {};
     const online = Object.values(members).filter(m=>m.online);
     document.getElementById('members-count').textContent = online.length;
     document.getElementById('online-info').textContent = `${online.length} kişi online`;
-    renderMembers(members);
+    renderMembers(Object.fromEntries(Object.entries(members).filter(([,m])=>m.online)));
   });
 
   // Mesajları dinle
